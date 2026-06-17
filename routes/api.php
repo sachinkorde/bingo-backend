@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('wallet/balance', [WalletController::class, 'balance']);
     Route::post('add-amount', [WalletController::class, 'addAmount']);
     Route::post('withdraw', [WalletController::class, 'withdraw']);
+    Route::post('transfer', [WalletController::class, 'transfer']);
 
     // Game
     Route::get('round/current', [GameController::class, 'currentRound']);

@@ -22,6 +22,7 @@ class AdminAccess
         'bets' => 'Bets',
         'deposits' => 'Deposits',
         'withdrawals' => 'Withdrawals',
+        'transfers' => 'Transfers',
     ];
 
     public static function current(): ?Admin

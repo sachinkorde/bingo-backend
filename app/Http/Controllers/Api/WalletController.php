@@ -4,10 +4,13 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Deposit;
+use App\Models\Transfer;
+use App\Models\User;
 use App\Models\Withdrawal;
 use App\Services\ReferralService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 
 class WalletController extends Controller
 {
@@ -92,5 +95,56 @@ class WalletController extends Controller
             'status' => $withdrawal->status,
             'balance' => $wallets->balance($user),
         ], 'Withdrawal request submitted for approval.');
+    }
+
+    /**
+     * Send money to another player by mobile or email. Atomic: debits the
+     * sender and credits the recipient in one transaction (both ledgered).
+     */
+    public function transfer(Request $request, WalletService $wallets)
+    {
+        $data = $request->validate([
+            'recipient' => ['required', 'string'], // mobile or email of the receiver
+            'amount' => ['required', 'numeric', 'min:1'],
+        ]);
+
+        $sender = $request->user();
+
+        $recipient = User::where('mobile', $data['recipient'])
+            ->orWhere('email', $data['recipient'])
+            ->first();
+
+        if (! $recipient) {
+            return $this->fail('Recipient not found.', 404);
+        }
+        if ($recipient->id === $sender->id) {
+            return $this->fail('You cannot transfer to yourself.', 422);
+        }
+        if ($recipient->status !== 'active') {
+            return $this->fail('Recipient account is not active.', 422);
+        }
+
+        $amount = number_format((float) $data['amount'], 2, '.', '');
+
+        // Atomic: if the sender lacks funds, debit() throws and the whole
+        // transaction (including the transfer row) rolls back.
+        $transfer = DB::transaction(function () use ($sender, $recipient, $amount, $wallets) {
+            $t = Transfer::create([
+                'sender_id' => $sender->id,
+                'recipient_id' => $recipient->id,
+                'amount' => $amount,
+                'status' => 'completed',
+            ]);
+
+            $wallets->debit($sender, $amount, 'transfer_out', "transfer:{$t->id}", ['to' => $recipient->mobile]);
+            $wallets->credit($recipient, $amount, 'transfer_in', "transfer:{$t->id}", ['from' => $sender->mobile]);
+
+            return $t;
+        });
+
+        return $this->ok([
+            'transfer_id' => $transfer->id,
+            'balance' => $wallets->balance($sender),
+        ], 'Transfer successful.');
     }
 }
