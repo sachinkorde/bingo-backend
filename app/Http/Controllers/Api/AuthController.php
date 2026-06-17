@@ -49,6 +49,15 @@ class AuthController extends Controller
             'confirm_password' => ['required', 'same:password'],
             'otp' => ['required', 'string'],
             'referral' => ['nullable', 'string'],
+        ], [
+            'mobile.required' => 'Please enter your mobile number.',
+            'mobile.regex' => 'Enter a valid 10-digit mobile number.',
+            'mobile.unique' => 'This mobile number is already registered.',
+            'email.email' => 'Enter a valid email address.',
+            'email.unique' => 'This email is already registered.',
+            'password.min' => 'Password must be at least 6 characters.',
+            'confirm_password.same' => 'Passwords do not match.',
+            'otp.required' => 'Please enter the OTP.',
         ]);
 
         if (! $otp->verify($data['mobile'], 'register', $data['otp'])) {

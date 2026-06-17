@@ -58,6 +58,21 @@ class AuthTest extends TestCase
         $this->assertNotEmpty($login->json('data.token'));
     }
 
+    public function test_validation_error_returns_specific_message(): void
+    {
+        $res = $this->postJson('/api/register', [
+            'mobile' => '123',            // invalid format
+            'password' => 'Bingo@123',
+            'confirm_password' => 'Bingo@123',
+            'otp' => '111111',
+        ]);
+
+        $res->assertStatus(422)
+            ->assertJson(['success' => false])
+            ->assertJsonPath('message', 'Enter a valid 10-digit mobile number.');
+        $this->assertNotEmpty($res->json('data.errors'));
+    }
+
     public function test_register_rejects_invalid_otp(): void
     {
         $mobile = '9876543210';

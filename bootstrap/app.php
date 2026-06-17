@@ -5,6 +5,7 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -36,6 +37,21 @@ return Application::configure(basePath: dirname(__DIR__))
                     'message' => 'Unauthenticated. Please login again.',
                     'data' => null,
                 ], 401);
+            }
+
+            return null;
+        });
+
+        // Validation errors -> our standard envelope, with the FIRST specific
+        // message (e.g. "Enter a valid 10-digit mobile number.") in `message`,
+        // and all field errors in `data.errors`.
+        $exceptions->render(function (ValidationException $e, Request $request) {
+            if ($request->is('api/*')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $e->validator->errors()->first(),
+                    'data' => ['errors' => $e->errors()],
+                ], 422);
             }
 
             return null;

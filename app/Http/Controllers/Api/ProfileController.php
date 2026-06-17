@@ -24,10 +24,10 @@ class ProfileController extends Controller
         $data = $request->validate([
             'name' => ['nullable', 'string', 'max:50'],
             'gender' => ['nullable', 'in:male,female,other'],
-            'date_of_birth' => ['nullable', 'string', 'max:20'],
+            'date_of_birth' => ['nullable', 'date'],          // rejects garbage / wrong formats
             'address' => ['nullable', 'string', 'max:255'],
-            'adhar_number' => ['nullable', 'string', 'max:20'],
-            'pan_number' => ['nullable', 'string', 'max:20'],
+            'adhar_number' => ['nullable', 'digits:12'],      // Aadhaar = 12 digits
+            'pan_number' => ['nullable', 'regex:/^[A-Z]{5}\d{4}[A-Z]$/'], // PAN format
             'profile_image' => ['nullable', 'image', 'max:10240'],
             'adhar_document' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
             'pan_document' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:10240'],
