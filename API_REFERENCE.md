@@ -7,7 +7,7 @@
 **Body format:** `form-data` (or `x-www-form-urlencoded`) unless noted.
 **Response envelope:** `{ "success": bool, "message": string, "data": {...} }`
 
-**Totals:** 19 endpoints working on the backend · 18 integrated in the Unity client.
+**Totals:** 20 endpoints working on the backend · 19 integrated in the Unity client.
 Not called by Unity: only `server-time` (used by the dashboard corner clock; the app syncs its clock via `round/current`).
 
 ---
@@ -40,6 +40,7 @@ Not called by Unity: only `server-time` (used by the dashboard corner clock; the
 | 12 | GET | `/api/wallet/balance` | Bearer | — | `data.balance` | `APIManager.GetWalletBalance` ✅ |
 | 13 | POST | `/api/add-amount` | Bearer | `amount` (>=1), `source` (optional, e.g. `bank`) | `data{ source, amount, status, balance }` | `APIManager.AddAmount` ✅ |
 | 14 | POST | `/api/withdraw` | Bearer | `amount` (>=1), `method` (optional: bank/upi/crypto) | `data{ withdrawal_id, status, balance }` (needs KYC + bank) | `APIManager.Withdraw` ✅ |
+| 14b | POST | `/api/transfer` | Bearer | `recipient` (mobile or email), `amount` (>=1) | `data{ transfer_id, balance }` (atomic user→user) | `APIManager.TransferMoney` / `WalletManager.TransferMoney` ✅ |
 
 ## D. Game (sessions, timer, betting)
 
