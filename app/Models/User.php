@@ -89,4 +89,38 @@ class User extends Authenticatable implements FilamentUser
     {
         return $this->role === 'admin';
     }
+
+    // ── Win/loss statistics (a "session" = one round the player bet in) ──────
+    public function roundsPlayed(): int
+    {
+        return (int) $this->bets()->distinct('round_id')->count('round_id');
+    }
+
+    public function roundsWon(): int
+    {
+        return (int) $this->bets()->where('is_winner', true)->distinct('round_id')->count('round_id');
+    }
+
+    public function winRate(): float
+    {
+        $played = $this->roundsPlayed();
+
+        return $played > 0 ? round($this->roundsWon() / $played * 100, 1) : 0.0;
+    }
+
+    public function totalWagered(): string
+    {
+        return (string) $this->bets()->sum('amount');
+    }
+
+    public function totalWon(): string
+    {
+        return (string) $this->bets()->where('is_winner', true)->sum('payout');
+    }
+
+    public function netProfit(): string
+    {
+        // Positive = player is up (house down); negative = player is down.
+        return bcsub($this->totalWon(), $this->totalWagered(), 2);
+    }
 }

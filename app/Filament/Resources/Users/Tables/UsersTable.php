@@ -28,6 +28,18 @@ class UsersTable
                     ->searchable(),
                 TextColumn::make('status')
                     ->searchable(),
+                TextColumn::make('balance')
+                    ->label('Balance')
+                    ->state(fn ($record) => $record->wallet?->balance ?? '0.00')
+                    ->money('INR'),
+                TextColumn::make('win_rate')
+                    ->label('Win %')
+                    ->state(fn ($record) => $record->winRate() . '%'),
+                TextColumn::make('net_profit')
+                    ->label('Net (player)')
+                    ->state(fn ($record) => $record->netProfit())
+                    ->money('INR')
+                    ->color(fn ($record) => bccomp((string) $record->netProfit(), '0', 2) >= 0 ? 'success' : 'danger'),
                 TextColumn::make('referral_code')
                     ->searchable(),
                 TextColumn::make('referred_by')
