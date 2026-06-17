@@ -64,6 +64,7 @@ class ProfileController extends Controller
             'mobile' => $user->mobile,
             'email' => $user->email,
             'status' => $user->status,
+            'referral_code' => $user->referral_code,
             'gamer' => $g ? [
                 'id' => $g->id,
                 'user_id' => $g->user_id,

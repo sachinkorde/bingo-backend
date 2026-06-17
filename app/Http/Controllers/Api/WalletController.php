@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Deposit;
 use App\Models\Withdrawal;
+use App\Services\ReferralService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
 
@@ -21,7 +22,7 @@ class WalletController extends Controller
      * where the status is decided. In local/dev (no gateway) we auto-confirm
      * so the flow is testable end to end.
      */
-    public function addAmount(Request $request, WalletService $wallets)
+    public function addAmount(Request $request, WalletService $wallets, ReferralService $referrals)
     {
         $data = $request->validate([
             'amount' => ['required', 'numeric', 'min:1'],
@@ -39,6 +40,7 @@ class WalletController extends Controller
 
         if ($deposit->status === 'success') {
             $wallets->credit($user, $deposit->amount, 'deposit', "deposit:{$deposit->id}");
+            $referrals->rewardInviterOnFirstDeposit($user);
         }
 
         return $this->ok([
