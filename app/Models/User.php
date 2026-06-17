@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -11,7 +9,9 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-class User extends Authenticatable implements FilamentUser
+// NOTE: players are NOT dashboard users. Dashboard access is the Admin model
+// (admins table + 'admin' guard). See App\Models\Admin.
+class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasApiTokens, HasFactory, Notifiable;
@@ -78,14 +78,6 @@ class User extends Authenticatable implements FilamentUser
 
     // ── Helpers ──────────────────────────────────────────────────────
     public function isAdmin(): bool
-    {
-        return $this->role === 'admin';
-    }
-
-    /**
-     * Only admins can log into the Filament dashboard.
-     */
-    public function canAccessPanel(Panel $panel): bool
     {
         return $this->role === 'admin';
     }

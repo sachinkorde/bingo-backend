@@ -36,6 +36,11 @@ class WalletTransactionResource extends Resource
         return false;
     }
 
+    public static function canViewAny(): bool
+    {
+        return \App\Support\AdminAccess::canView('wallet_transactions');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return WalletTransactionForm::configure($schema);

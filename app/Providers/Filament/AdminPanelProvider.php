@@ -27,6 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('admin')
+            ->authGuard('admin')   // operators log in against the admins table, not players
             ->login()
             ->colors([
                 'primary' => Color::Amber,

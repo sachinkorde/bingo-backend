@@ -20,6 +20,11 @@ class BetResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        return \App\Support\AdminAccess::canView('bets');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return BetForm::configure($schema);

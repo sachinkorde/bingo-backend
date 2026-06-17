@@ -24,7 +24,16 @@ A beginner-friendly guide (you're a Unity/C# dev, so this assumes no PHP backgro
 
 > If `php` says "not recognized": close and reopen the terminal (PHP was installed via Scoop into your user PATH). If it still fails, the folder `C:\Users\sachi\scoop\shims` must be on your PATH.
 
-**Admin dashboard:** http://localhost:8000/admin — login `9999999999` / `Admin@123`
+**Admin dashboard:** http://localhost:8000/admin
+**Superadmin login (dev):** `superadmin@realbingo.test` / `Super@123`
+**Create a real superadmin (separate, secure):**
+```
+php artisan bingo:create-superadmin
+```
+**Admin roles:** superadmin (owner) → admin → subadmin. Superadmin creates admins;
+admins create subadmins; subadmins only see the resources granted to them (set via the
+"Subadmin can view" checkboxes when creating/editing a subadmin). Admins live in their
+own `admins` table — completely separate from players.
 **OTP codes (local):** printed in `storage/logs/laravel.log`
 
 ---

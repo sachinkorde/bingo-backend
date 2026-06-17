@@ -20,6 +20,11 @@ class BankDetailResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        return \App\Support\AdminAccess::canView('bank_details');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return BankDetailForm::configure($schema);

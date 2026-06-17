@@ -20,6 +20,11 @@ class RoundResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        return \App\Support\AdminAccess::canView('rounds');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return RoundForm::configure($schema);

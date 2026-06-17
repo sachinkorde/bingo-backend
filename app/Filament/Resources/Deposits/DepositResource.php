@@ -20,6 +20,11 @@ class DepositResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        return \App\Support\AdminAccess::canView('deposits');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return DepositForm::configure($schema);

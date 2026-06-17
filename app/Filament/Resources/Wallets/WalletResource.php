@@ -20,6 +20,11 @@ class WalletResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        return \App\Support\AdminAccess::canView('wallets');
+    }
+
     public static function form(Schema $schema): Schema
     {
         return WalletForm::configure($schema);

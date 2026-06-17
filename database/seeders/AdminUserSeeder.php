@@ -2,22 +2,25 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
+use App\Models\Admin;
 use Illuminate\Database\Seeder;
 
+/**
+ * Dev convenience: seeds a default SUPERADMIN into the admins table.
+ * For real/production use, create the superadmin with:
+ *   php artisan bingo:create-superadmin
+ */
 class AdminUserSeeder extends Seeder
 {
     public function run(): void
     {
-        User::updateOrCreate(
-            ['mobile' => '9999999999'],
+        Admin::updateOrCreate(
+            ['email' => 'superadmin@realbingo.test'],
             [
-                'name' => 'Admin',
-                'email' => 'admin@realbingo.test',
-                'password' => 'Admin@123', // hashed by the model cast
-                'role' => 'admin',
+                'name' => 'Super Admin',
+                'password' => 'Super@123', // hashed by the model cast
+                'role' => 'superadmin',
                 'status' => 'active',
-                'referral_code' => 'ADMIN001',
             ]
         );
     }
