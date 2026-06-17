@@ -60,4 +60,22 @@ class ReferralTest extends TestCase
         $this->withToken($token)->postJson('/api/add-amount', ['amount' => 200])->assertOk();
         $this->assertEquals('50.00', $inviter->wallet()->first()->balance);
     }
+
+    public function test_admin_set_referral_amount_is_used(): void
+    {
+        \App\Models\Setting::put('referral_bonus', '77');
+
+        $inviter = $this->register('9876510010');
+        $invitee = $this->register('9876510011', $inviter->referral_code);
+
+        $token = $this->postJson('/api/login', [
+            'credential' => '9876510011',
+            'password' => 'Bingo@123',
+        ])->json('data.token');
+
+        $this->withToken($token)->postJson('/api/add-amount', ['amount' => 500])->assertOk();
+
+        // The admin-configured amount (77), not the config default, is paid.
+        $this->assertEquals('77.00', $inviter->wallet()->first()->balance);
+    }
 }

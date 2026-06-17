@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Setting;
 use App\Models\User;
 use App\Models\WalletTransaction;
 
@@ -15,7 +16,8 @@ class ReferralService
 
     public function rewardInviterOnFirstDeposit(User $invitee): void
     {
-        $bonus = (float) config('game.referral_bonus', 0);
+        // Amount is set by admins from the dashboard (falls back to config).
+        $bonus = (float) Setting::get('referral_bonus', config('game.referral_bonus', 0));
 
         if ($bonus <= 0 || empty($invitee->referred_by)) {
             return;
