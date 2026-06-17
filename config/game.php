@@ -16,6 +16,9 @@ return [
 
     'betting_seconds' => (int) env('GAME_BETTING_SECONDS', 59), // betting window
     'spin_seconds' => (int) env('GAME_SPIN_SECONDS', 8),        // wheel animation time
+    // Result window after betting closes = spin + payout display. The next round
+    // does not open until this elapses, so all devices spin/reveal together.
+    'result_seconds' => (int) env('GAME_RESULT_SECONDS', 13),
 
     'min_bet' => (float) env('GAME_MIN_BET', 10),
     'max_bet_per_number' => (float) env('GAME_MAX_BET_PER_NUMBER', 100000),

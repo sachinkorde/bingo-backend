@@ -22,9 +22,16 @@ class RoundService
         return (int) config('game.numbers', 10);
     }
 
+    public function resultSeconds(): int
+    {
+        return (int) config('game.result_seconds', 13);
+    }
+
     /**
-     * The active betting round. Rotates automatically as time passes:
-     * settles an expired round and opens the next one.
+     * The active round. Lifecycle per slot:
+     *   betting (betting_seconds) -> result window (result_seconds) -> next slot.
+     * During the result window the settled round is returned so every device
+     * spins and reveals the winner together before the next betting opens.
      */
     public function currentRound(): Round
     {
@@ -34,14 +41,23 @@ class RoundService
             return $this->openRound(1);
         }
 
+        // Betting still open.
         if ($round->status === 'betting' && $round->betting_closes_at->isFuture()) {
             return $round;
         }
 
+        // Betting just ended -> settle and enter the result/spin window.
         if ($round->status === 'betting') {
-            $this->settle($round);
+            $round = $this->settle($round);
         }
 
+        // Hold the settled round for the full result window.
+        $resultEndsAt = $round->betting_closes_at->copy()->addSeconds($this->resultSeconds());
+        if (now()->lessThan($resultEndsAt)) {
+            return $round;
+        }
+
+        // Result window elapsed -> open the next round.
         return $this->openRound($round->slot_no + 1);
     }
 

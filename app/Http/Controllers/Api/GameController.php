@@ -20,15 +20,29 @@ class GameController extends Controller
     {
         $round = $rounds->currentRound();
 
+        $phase = $round->status === 'betting' ? 'betting' : 'result';
+
+        // seconds_left counts down the CURRENT phase, from the server clock, so
+        // every device is synchronized.
+        $target = $phase === 'betting'
+            ? $round->betting_closes_at
+            : $round->betting_closes_at->copy()->addSeconds($rounds->resultSeconds());
+
+        $secondsLeft = max(0, $target->timestamp - now()->timestamp);
+
         return $this->ok([
             'slot_id' => $round->id,
             'slot_no' => $round->slot_no,
             'status' => $round->status,
-            'betting_closes_at' => $round->betting_closes_at?->toIso8601String(),
-            'seconds_left' => max(0, (int) now()->diffInSeconds($round->betting_closes_at, false)),
+            'phase' => $phase,                  // 'betting' or 'result'
+            'seconds_left' => $secondsLeft,
+            'winning_number' => $round->status === 'settled' ? $round->winning_number : null,
             'server_seed_hash' => $round->server_seed_hash,
             'numbers' => $rounds->numbers(),
             'payout_multiplier' => (int) config('game.payout_multiplier', 9),
+            'betting_seconds' => (int) config('game.betting_seconds', 59),
+            'spin_seconds' => (int) config('game.spin_seconds', 8),
+            'result_seconds' => $rounds->resultSeconds(),
         ], 'Current round');
     }
 
