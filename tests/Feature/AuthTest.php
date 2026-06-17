@@ -10,6 +10,14 @@ class AuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_unauthenticated_api_returns_401_not_500(): void
+    {
+        // Plain GET (no Accept: application/json header) must still be 401 JSON.
+        $this->get('/api/round/current')
+            ->assertStatus(401)
+            ->assertJson(['success' => false]);
+    }
+
     public function test_send_otp_for_registration(): void
     {
         $res = $this->postJson('/api/send-otp', [
