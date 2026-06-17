@@ -6,11 +6,25 @@ use App\Models\Round;
 use App\Services\OtpService;
 use App\Services\RoundService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Tests\TestCase;
 
 class GameTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        // Pin to second 0 of a minute so betting is open during the test.
+        Carbon::setTestNow('2026-06-18 10:00:00');
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+        parent::tearDown();
+    }
 
     private function registerAndFund(string $mobile, float $amount): string
     {
@@ -37,14 +51,16 @@ class GameTest extends TestCase
     {
         $token = $this->registerAndFund('9876500000', 1000);
 
-        $slotId = $this->withToken($token)->getJson('/api/round/current')->json('data.slot_id');
+        $session = $this->withToken($token)->getJson('/api/round/current')->json('data');
+        $slotId = $session['slot_id'];
+        $slotNo = $session['slot_no'];
 
         // Compute the fair winner for this round (derived from the seed).
         $round = Round::find($slotId);
         $winner = app(RoundService::class)->deriveWinningNumber($round);
 
         $bid = $this->withToken($token)->postJson('/api/place-bid', [
-            'slot_id' => $slotId,
+            'slot_no' => $slotNo,
             'bids' => json_encode([[(string) $winner => 100]]),
         ]);
 
@@ -67,10 +83,10 @@ class GameTest extends TestCase
     {
         $token = $this->registerAndFund('9876500001', 0);
 
-        $slotId = $this->withToken($token)->getJson('/api/round/current')->json('data.slot_id');
+        $slotNo = $this->withToken($token)->getJson('/api/round/current')->json('data.slot_no');
 
         $res = $this->withToken($token)->postJson('/api/place-bid', [
-            'slot_id' => $slotId,
+            'slot_no' => $slotNo,
             'bids' => json_encode([['1' => 100]]),
         ]);
 
@@ -80,10 +96,10 @@ class GameTest extends TestCase
     public function test_bet_rejects_invalid_number(): void
     {
         $token = $this->registerAndFund('9876500002', 1000);
-        $slotId = $this->withToken($token)->getJson('/api/round/current')->json('data.slot_id');
+        $slotNo = $this->withToken($token)->getJson('/api/round/current')->json('data.slot_no');
 
         $res = $this->withToken($token)->postJson('/api/place-bid', [
-            'slot_id' => $slotId,
+            'slot_no' => $slotNo,
             'bids' => json_encode([['99' => 100]]),
         ]);
 

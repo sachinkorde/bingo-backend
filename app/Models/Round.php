@@ -40,4 +40,10 @@ class Round extends Model
             && $this->betting_closes_at !== null
             && $this->betting_closes_at->isFuture();
     }
+
+    /** House earning for the session = total wagered − total paid out. */
+    public function earning(): string
+    {
+        return bcsub((string) ($this->total_bet ?? '0'), (string) ($this->total_payout ?? '0'), 2);
+    }
 }

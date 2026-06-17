@@ -14,6 +14,10 @@ use Illuminate\Support\Facades\Route;
 */
 
 // ── Public ───────────────────────────────────────────────────────────────
+// Lightweight clock sync (no auth) — the app/dashboard call this ONCE then count
+// locally, so the timer is identical on every device with no per-second traffic.
+Route::get('server-time', [GameController::class, 'serverTime']);
+
 Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:6,1');

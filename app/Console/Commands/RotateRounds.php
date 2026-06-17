@@ -18,9 +18,11 @@ class RotateRounds extends Command
 
     public function handle(RoundService $rounds): int
     {
-        $round = $rounds->currentRound();
+        // Settles any finished sessions and ensures the current one exists, so
+        // sessions are recorded 24/7 even with no players online.
+        $session = $rounds->currentSession();
 
-        $this->info("Active round #{$round->slot_no} (id {$round->id}) — {$round->status}, closes {$round->betting_closes_at}.");
+        $this->info("Active session slot #{$session->slot_no} (id {$session->id}) — {$session->status}.");
 
         return self::SUCCESS;
     }

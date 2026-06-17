@@ -14,11 +14,11 @@ return [
     'numbers' => (int) env('GAME_NUMBERS', 10),                 // slots 0..9
     'payout_multiplier' => (int) env('GAME_PAYOUT_MULTIPLIER', 9),
 
-    'betting_seconds' => (int) env('GAME_BETTING_SECONDS', 59), // betting window
-    'spin_seconds' => (int) env('GAME_SPIN_SECONDS', 8),        // wheel animation time
-    // Result window after betting closes = spin + payout display. The next round
-    // does not open until this elapses, so all devices spin/reveal together.
-    'result_seconds' => (int) env('GAME_RESULT_SECONDS', 13),
+    // A session is a fixed, clock-aligned window: slot_no = floor(unixtime / session_seconds).
+    'session_seconds' => (int) env('GAME_SESSION_SECONDS', 60), // full session length (24/7)
+    'betting_seconds' => (int) env('GAME_BETTING_SECONDS', 50), // betting window within the session
+    'spin_seconds' => (int) env('GAME_SPIN_SECONDS', 8),        // wheel animation (within the result window)
+    // result window = session_seconds - betting_seconds (e.g. 10s for spin + reveal)
 
     'min_bet' => (float) env('GAME_MIN_BET', 10),
     'max_bet_per_number' => (float) env('GAME_MAX_BET_PER_NUMBER', 100000),

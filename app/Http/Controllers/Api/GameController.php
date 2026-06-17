@@ -13,37 +13,49 @@ use Illuminate\Support\Facades\DB;
 class GameController extends Controller
 {
     /**
-     * Current betting round — the client syncs its wheel/timer to this instead
-     * of running its own clock.
+     * Current clock-aligned session. The client syncs `server_time` ONCE and then
+     * counts locally — every device shows the same second with no per-second calls.
      */
     public function currentRound(RoundService $rounds)
     {
-        $round = $rounds->currentRound();
-
-        $phase = $round->status === 'betting' ? 'betting' : 'result';
-
-        // seconds_left counts down the CURRENT phase, from the server clock, so
-        // every device is synchronized.
-        $target = $phase === 'betting'
-            ? $round->betting_closes_at
-            : $round->betting_closes_at->copy()->addSeconds($rounds->resultSeconds());
-
-        $secondsLeft = max(0, $target->timestamp - now()->timestamp);
+        $session = $rounds->currentSession();
+        $t = $rounds->timingFor($session);
 
         return $this->ok([
-            'slot_id' => $round->id,
-            'slot_no' => $round->slot_no,
-            'status' => $round->status,
-            'phase' => $phase,                  // 'betting' or 'result'
-            'seconds_left' => $secondsLeft,
-            'winning_number' => $round->status === 'settled' ? $round->winning_number : null,
-            'server_seed_hash' => $round->server_seed_hash,
+            'server_time' => now()->valueOf(),   // ms epoch — sync once, count locally
+            'slot_id' => $session->id,
+            'slot_no' => $session->slot_no,
+            'status' => $session->status,
+            'phase' => $t['phase'],              // 'betting' or 'result'
+            'seconds_left' => $t['phase_seconds_left'],
+            'session_seconds_left' => $t['session_seconds_left'],
+            'winning_number' => $rounds->winningNumberFor($session),
+            'server_seed_hash' => $session->server_seed_hash,
             'numbers' => $rounds->numbers(),
             'payout_multiplier' => (int) config('game.payout_multiplier', 9),
-            'betting_seconds' => (int) config('game.betting_seconds', 59),
+            'session_seconds' => $rounds->sessionSeconds(),
+            'betting_seconds' => $rounds->bettingSeconds(),
             'spin_seconds' => (int) config('game.spin_seconds', 8),
-            'result_seconds' => $rounds->resultSeconds(),
-        ], 'Current round');
+        ], 'Current session');
+    }
+
+    /**
+     * Lightweight public time/session sync (used by the dashboard corner timer).
+     */
+    public function serverTime(RoundService $rounds)
+    {
+        $session = $rounds->currentSession();
+        $t = $rounds->timingFor($session);
+
+        return $this->ok([
+            'server_time' => now()->valueOf(),
+            'slot_no' => $session->slot_no,
+            'phase' => $t['phase'],
+            'seconds_left' => $t['phase_seconds_left'],
+            'session_seconds_left' => $t['session_seconds_left'],
+            'session_seconds' => $rounds->sessionSeconds(),
+            'betting_seconds' => $rounds->bettingSeconds(),
+        ], 'Server time');
     }
 
     /**
@@ -53,16 +65,18 @@ class GameController extends Controller
     public function placeBid(Request $request, RoundService $rounds, WalletService $wallets)
     {
         $data = $request->validate([
-            'slot_id' => ['required', 'integer'],
+            'slot_no' => ['required', 'integer'],
             'bids' => ['required'],
         ]);
 
-        $round = $rounds->currentRound();
+        $round = $rounds->currentSession();
 
-        if ((int) $data['slot_id'] !== $round->id) {
-            return $this->fail('Betting round has changed, please retry.', 409, ['slot_id' => $round->id]);
+        // The client computes slot_no from the synced clock; make sure it's still
+        // the active session (it may have rolled over between bet and submit).
+        if ((string) $data['slot_no'] !== (string) $round->slot_no) {
+            return $this->fail('Betting round has changed, please retry.', 409, ['slot_no' => $round->slot_no]);
         }
-        if (! $round->isBettingOpen()) {
+        if (! $rounds->isBettingOpen($round)) {
             return $this->fail('Betting is closed for this round.', 422);
         }
 
