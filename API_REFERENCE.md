@@ -7,8 +7,8 @@
 **Body format:** `form-data` (or `x-www-form-urlencoded`) unless noted.
 **Response envelope:** `{ "success": bool, "message": string, "data": {...} }`
 
-**Totals:** 19 endpoints working on the backend · 17 integrated in the Unity client.
-Not called by Unity: `server-time` (used by the dashboard) and `round/history` (history is shown locally in the app).
+**Totals:** 19 endpoints working on the backend · 18 integrated in the Unity client.
+Not called by Unity: only `server-time` (used by the dashboard corner clock; the app syncs its clock via `round/current`).
 
 ---
 
@@ -49,7 +49,7 @@ Not called by Unity: `server-time` (used by the dashboard) and `round/history` (
 | 16 | GET | `/api/round/current` | Bearer | — | `data{ server_time, slot_id, slot_no, status, phase, seconds_left, session_seconds_left, winning_number, server_seed_hash, numbers, payout_multiplier, session_seconds, betting_seconds, spin_seconds }` | `APIManager.GetCurrentRound` ✅ (timer sync + winning number) |
 | 17 | POST | `/api/place-bid` | Bearer | `slot_no` (clock session number), `bids` (JSON: `[{"3":100,"5":50}]`) | `data{ slot_id, total_bet, balance }` | `APIManager.PlaceBid` ✅ |
 | 18 | GET | `/api/round/{slotId}/result` | Bearer | path: `slotId` (DB id) | `data{ slot_id, status, winning_number, server_seed, server_seed_hash, your_payout, bets[] }` | `APIManager.GetRoundResult` ✅ |
-| 19 | GET | `/api/round/history` | Bearer | — | `data.history` (last 10 winning numbers) | ❌ not in Unity (history shown locally) |
+| 19 | GET | `/api/round/history` | Bearer | — | `data.history` (last 10 winning numbers) | `APIManager.GetRoundHistory` ✅ (seeds the last-10 strip on app start) |
 
 ---
 
