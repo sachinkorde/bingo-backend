@@ -20,6 +20,22 @@ class WalletTransactionResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    // The ledger is immutable — view only. No create/edit/delete from the dashboard.
+    public static function canCreate(): bool
+    {
+        return false;
+    }
+
+    public static function canEdit($record): bool
+    {
+        return false;
+    }
+
+    public static function canDelete($record): bool
+    {
+        return false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return WalletTransactionForm::configure($schema);
