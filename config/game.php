@@ -16,9 +16,10 @@ return [
 
     // A session is a fixed, clock-aligned window: slot_no = floor(unixtime / session_seconds).
     'session_seconds' => (int) env('GAME_SESSION_SECONDS', 60), // full session length (24/7)
-    'betting_seconds' => (int) env('GAME_BETTING_SECONDS', 40), // betting window within the session
-    'spin_seconds' => (int) env('GAME_SPIN_SECONDS', 5),        // wheel animation (within the result window)
-    // result window = session - betting = 20s (5 spin + 1s settle delay + ~14s win display)
+    'betting_seconds' => (int) env('GAME_BETTING_SECONDS', 55), // betting window (no separate result-hold)
+    'spin_seconds' => (int) env('GAME_SPIN_SECONDS', 5),        // wheel spin = the only non-betting time
+    // No dead time: session = betting (55s) + spin (5s). The next betting starts
+    // immediately after the spin; the win stays shown in the Winning box.
     // result window = session_seconds - betting_seconds (e.g. 10s for spin + reveal)
 
     'min_bet' => (float) env('GAME_MIN_BET', 10),
