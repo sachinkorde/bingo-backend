@@ -34,6 +34,7 @@ class AdminPanelTest extends TestCase
 
         $this->actingAs($super, 'admin');
 
+        $this->get('/admin')->assertOk();              // dashboard home + KPI widget
         $this->get('/admin/users')->assertOk();
         $this->get("/admin/users/{$player->id}/edit")->assertOk();
         $this->get('/admin/admins')->assertOk();        // can manage operators

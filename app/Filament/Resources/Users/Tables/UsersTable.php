@@ -40,6 +40,11 @@ class UsersTable
                     ->state(fn ($record) => $record->netProfit())
                     ->money('INR')
                     ->color(fn ($record) => bccomp((string) $record->netProfit(), '0', 2) >= 0 ? 'success' : 'danger'),
+                TextColumn::make('risk')
+                    ->label('Risk')
+                    ->state(fn ($record) => $record->suspicionReason() ?? 'OK')
+                    ->badge()
+                    ->color(fn ($record) => $record->isSuspicious() ? 'danger' : 'gray'),
                 TextColumn::make('referral_code')
                     ->searchable(),
                 TextColumn::make('referred_by')

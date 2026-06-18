@@ -31,9 +31,16 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->authGuard('admin')   // operators log in against the admins table, not players
             ->login()
+            ->brandName('Real Bingo — Admin')
             ->colors([
                 'primary' => Color::Amber,
+                'gray' => Color::Slate,
+                'success' => Color::Emerald,
+                'danger' => Color::Rose,
+                'warning' => Color::Amber,
+                'info' => Color::Sky,
             ])
+            ->sidebarCollapsibleOnDesktop()
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\Filament\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\Filament\Pages')
             ->pages([

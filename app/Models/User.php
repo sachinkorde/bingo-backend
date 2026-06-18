@@ -115,4 +115,25 @@ class User extends Authenticatable
         // Positive = player is up (house down); negative = player is down.
         return bcsub($this->totalWon(), $this->totalWagered(), 2);
     }
+
+    // ── Suspicious-activity heuristics (tune thresholds as needed) ──────────
+    public function suspicionReason(): ?string
+    {
+        // Winning far above chance over a meaningful sample.
+        if ($this->roundsPlayed() >= 20 && $this->winRate() > 55) {
+            return 'High win rate (' . $this->winRate() . '% over ' . $this->roundsPlayed() . ' rounds)';
+        }
+
+        // Player is up a lot (possible exploit/collusion — review).
+        if ((float) $this->netProfit() > 50000) {
+            return 'Large net winner (₹' . number_format((float) $this->netProfit()) . ')';
+        }
+
+        return null;
+    }
+
+    public function isSuspicious(): bool
+    {
+        return $this->suspicionReason() !== null;
+    }
 }
