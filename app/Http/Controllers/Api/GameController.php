@@ -137,12 +137,16 @@ class GameController extends Controller
      * Result of a round (winning number + this player's payout). Reveals the
      * server seed once settled so players can verify fairness.
      */
-    public function result(Request $request, int $slotId)
+    public function result(Request $request, RoundService $rounds, int $slotId)
     {
         $round = Round::find($slotId);
         if (! $round) {
             return $this->fail('Round not found.', 404);
         }
+
+        // Make sure it's settled (winners paid) before we report the result.
+        $rounds->settleIfBettingClosed($round);
+        $round->refresh();
 
         $user = $request->user();
         $userBets = Bet::where('round_id', $round->id)->where('user_id', $user->id)->get();
@@ -153,7 +157,7 @@ class GameController extends Controller
             'winning_number' => $round->winning_number,
             'server_seed' => $round->status === 'settled' ? $round->server_seed : null,
             'server_seed_hash' => $round->server_seed_hash,
-            'your_payout' => (string) $userBets->where('is_winner', true)->sum('payout'),
+            'your_payout' => number_format((float) $userBets->where('is_winner', true)->sum('payout'), 2, '.', ''),
             'bets' => $userBets->map(fn ($b) => [
                 'number' => $b->number,
                 'amount' => $b->amount,

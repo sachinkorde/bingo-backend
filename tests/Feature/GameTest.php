@@ -79,6 +79,35 @@ class GameTest extends TestCase
         $this->assertEquals('1800.00', $balance);
     }
 
+    public function test_payout_credited_when_betting_closes_same_session(): void
+    {
+        $token = $this->registerAndFund('9876500009', 1000);
+
+        $session = $this->withToken($token)->getJson('/api/round/current')->json('data');
+        $slotId = $session['slot_id'];
+        $slotNo = $session['slot_no'];
+
+        $round = Round::find($slotId);
+        $winner = app(RoundService::class)->deriveWinningNumber($round);
+
+        $this->withToken($token)->postJson('/api/place-bid', [
+            'slot_no' => $slotNo,
+            'bids' => json_encode([[(string) $winner => 100]]),
+        ])->assertOk();
+
+        // Jump to the result phase of the SAME minute/slot (second 55).
+        Carbon::setTestNow('2026-06-18 10:00:55');
+
+        // Fetching the result now settles it and pays the winner immediately.
+        $result = $this->withToken($token)->getJson("/api/round/{$slotId}/result");
+        $result->assertOk();
+        $this->assertEquals($winner, $result->json('data.winning_number'));
+        $this->assertEquals('900.00', $result->json('data.your_payout'));
+
+        $balance = $this->withToken($token)->getJson('/api/wallet/balance')->json('data.balance');
+        $this->assertEquals('1800.00', $balance); // 900 left after bet + 900 payout
+    }
+
     public function test_bet_rejected_without_funds(): void
     {
         $token = $this->registerAndFund('9876500001', 0);

@@ -60,7 +60,22 @@ class RoundService
         $slotNo = $this->currentSlotNo();
         $this->settleDueSessions($slotNo);
 
-        return $this->ensureSession($slotNo);
+        $session = $this->ensureSession($slotNo);
+
+        // Settle the moment betting closes (result phase) so winners are paid at
+        // REVEAL time — not when the next session opens. Fixes "won but no money"
+        // and "money appears randomly later".
+        $this->settleIfBettingClosed($session);
+
+        return $session->refresh();
+    }
+
+    /** Settle a session as soon as its betting window has ended. */
+    public function settleIfBettingClosed(Round $session): void
+    {
+        if ($session->status === 'betting' && ! $this->isBettingOpen($session)) {
+            $this->settle($session);
+        }
     }
 
     public function ensureSession(int $slotNo): Round
