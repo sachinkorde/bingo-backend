@@ -12,7 +12,7 @@
 </div>
 <script>
 (function () {
-    var offset = 0, sessionSeconds = 60, synced = false;
+    var offset = 0, sessionSeconds = 60, bettingSeconds = 40, synced = false;
 
     function syncOnce() {
         fetch('{{ url('/api/server-time') }}', { headers: { 'Accept': 'application/json' } })
@@ -21,6 +21,7 @@
                 if (!res || !res.data) return;
                 offset = res.data.server_time - Date.now();          // sync once
                 sessionSeconds = res.data.session_seconds || 60;
+                bettingSeconds = res.data.betting_seconds || 40;
                 synced = true;
             })
             .catch(function () {});
@@ -33,7 +34,9 @@
         var now = Date.now() + offset;                                // local clock + offset
         var sec = Math.floor(now / 1000);
         var slot = Math.floor(sec / sessionSeconds);
-        var left = sessionSeconds - (sec % sessionSeconds);
+        var into = sec % sessionSeconds;
+        // Same value the GAME shows: betting countdown (betting→0), then 0 during spin/result.
+        var left = (into < bettingSeconds) ? (bettingSeconds - into) : 0;
         var d = new Date(now);
 
         var slotEl = document.getElementById('rb-slot');
