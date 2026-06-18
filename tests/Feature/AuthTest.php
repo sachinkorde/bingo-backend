@@ -27,6 +27,9 @@ class AuthTest extends TestCase
 
         $res->assertOk()->assertJson(['success' => true]);
         $this->assertDatabaseHas('otps', ['mobile' => '9876543210', 'module' => 'register']);
+        // Non-production returns the OTP for dev convenience.
+        $this->assertIsInt($res->json('data'));
+        $this->assertGreaterThan(0, $res->json('data'));
     }
 
     public function test_register_creates_user_wallet_gamer_then_login(): void

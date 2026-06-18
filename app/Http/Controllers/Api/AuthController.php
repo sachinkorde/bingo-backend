@@ -32,9 +32,13 @@ class AuthController extends Controller
             return $this->fail('Mobile number already registered.', 422);
         }
 
-        $otp->generate($data['mobile'], $data['module']);
+        $code = $otp->generate($data['mobile'], $data['module']);
 
-        return $this->ok(null, 'OTP sent successfully!');
+        // DEV CONVENIENCE: return the OTP in non-production so testers don't have
+        // to read the log. In PRODUCTION this is null — the OTP is never exposed.
+        $payload = app()->environment('production') ? null : (int) $code;
+
+        return $this->ok($payload, 'OTP sent successfully!');
     }
 
     /**
