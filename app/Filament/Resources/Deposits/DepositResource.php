@@ -20,6 +20,12 @@ class DepositResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Money';
+
+    protected static ?string $navigationLabel = 'Deposits (Add Money)';
+
+    protected static ?int $navigationSort = 1;
+
     public static function canViewAny(): bool
     {
         return \App\Support\AdminAccess::canView('deposits');

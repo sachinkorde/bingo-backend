@@ -22,7 +22,11 @@ class AdminResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUserGroup;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+
     protected static ?string $navigationLabel = 'Admins & Subadmins';
+
+    protected static ?int $navigationSort = 1;
 
     // Only superadmin/admin can manage operators; subadmins cannot see this at all.
     public static function canViewAny(): bool

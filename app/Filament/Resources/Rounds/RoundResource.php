@@ -20,6 +20,12 @@ class RoundResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Game';
+
+    protected static ?string $navigationLabel = 'Game Sessions';
+
+    protected static ?int $navigationSort = 1;
+
     // Session financials (earnings) are visible to the SUPERADMIN only.
     public static function canViewAny(): bool
     {

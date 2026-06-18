@@ -20,6 +20,12 @@ class WithdrawalResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Money';
+
+    protected static ?string $navigationLabel = 'Withdrawals (Cash Out)';
+
+    protected static ?int $navigationSort = 2;
+
     public static function canViewAny(): bool
     {
         return \App\Support\AdminAccess::canView('withdrawals');

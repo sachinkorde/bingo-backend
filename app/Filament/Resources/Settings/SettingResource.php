@@ -21,7 +21,11 @@ class SettingResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Administration';
+
     protected static ?string $navigationLabel = 'Settings';
+
+    protected static ?int $navigationSort = 2;
 
     // Only superadmin/admin can change settings (the referral bonus, etc.).
     public static function canViewAny(): bool

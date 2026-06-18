@@ -20,6 +20,12 @@ class WalletResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Players';
+
+    protected static ?string $navigationLabel = 'Player Balances';
+
+    protected static ?int $navigationSort = 4;
+
     public static function canViewAny(): bool
     {
         return \App\Support\AdminAccess::canView('wallets');

@@ -20,6 +20,12 @@ class WalletTransactionResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Money';
+
+    protected static ?string $navigationLabel = 'Money History';
+
+    protected static ?int $navigationSort = 4;
+
     // The ledger is immutable — view only. No create/edit/delete from the dashboard.
     public static function canCreate(): bool
     {
