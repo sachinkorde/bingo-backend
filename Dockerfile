@@ -13,7 +13,10 @@ COPY public ./public
 RUN npm run build
 
 # ─── Stage 2: runtime ───────────────────────────────────────────────────────
-FROM php:8.3-apache AS runtime
+# PHP 8.4, not 8.3: composer.lock was resolved on PHP 8.5 and pins Symfony
+# v8.1.0, which requires php >= 8.4.1. Bump this if a future `composer update`
+# locks packages that need a newer PHP than the image provides.
+FROM php:8.4-apache AS runtime
 
 # PHP extensions. bcmath is REQUIRED (all wallet money math uses it);
 # pdo_pgsql for Postgres; intl/gd/zip for Filament.
