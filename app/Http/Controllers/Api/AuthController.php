@@ -35,8 +35,13 @@ class AuthController extends Controller
         $code = $otp->generate($data['mobile'], $data['module']);
 
         // DEV CONVENIENCE: return the OTP in non-production so testers don't have
-        // to read the log. In PRODUCTION this is null — the OTP is never exposed.
-        $payload = app()->environment('production') ? null : (int) $code;
+        // to read the log. In PRODUCTION this is null — the OTP is never exposed,
+        // UNLESS OTP_DEBUG_EXPOSE=true is set to allow testing on a deployed
+        // server that has no SMS provider yet. See config/game.php for the
+        // warning that goes with that flag.
+        $expose = ! app()->environment('production') || config('game.otp_debug_expose');
+
+        $payload = $expose ? (int) $code : null;
 
         return $this->ok($payload, 'OTP sent successfully!');
     }

@@ -86,3 +86,10 @@ services:
         value: "0"
       - key: REFERRAL_BONUS
         value: "50"
+
+      # TESTING ONLY — returns the OTP in the send-otp response so the Unity
+      # console can display it while no SMS provider exists. Set to "true" in
+      # the Render dashboard while testing, then put it back to "false".
+      # ⚠ While true, anyone can register any mobile number they don't own.
+      - key: OTP_DEBUG_EXPOSE
+        value: "false"
