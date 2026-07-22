@@ -33,4 +33,14 @@ return [
 
     'otp_ttl_seconds' => (int) env('OTP_TTL_SECONDS', 300),
     'otp_max_attempts' => (int) env('OTP_MAX_ATTEMPTS', 5),
+
+    /*
+    | TESTING ONLY. Returns the OTP in the send-otp API response so the Unity
+    | console can show it while no SMS provider is wired up.
+    |
+    | ⚠ This defeats OTP security completely — anyone who can call the API can
+    | register ANY mobile number without owning it. Must be false (or removed)
+    | before real players use the app.
+    */
+    'otp_debug_expose' => filter_var(env('OTP_DEBUG_EXPOSE', false), FILTER_VALIDATE_BOOLEAN),
 ];
