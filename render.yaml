@@ -87,9 +87,13 @@ services:
       - key: REFERRAL_BONUS
         value: "50"
 
-      # TESTING ONLY — returns the OTP in the send-otp response so the Unity
-      # console can display it while no SMS provider exists. Set to "true" in
-      # the Render dashboard while testing, then put it back to "false".
-      # ⚠ While true, anyone can register any mobile number they don't own.
+      # ⚠⚠ TESTING ONLY — CURRENTLY ENABLED ⚠⚠
+      # Returns the OTP in the send-otp response so the Unity console can show
+      # it while no SMS provider is wired up.
+      #
+      # While this is "true", ANYONE who can reach this API can request an OTP
+      # for a mobile number they do not own and register as that person. Set it
+      # back to "false" before real players use the app, or as soon as an SMS
+      # provider is hooked into OtpService::generate().
       - key: OTP_DEBUG_EXPOSE
-        value: "false"
+        value: "true"
