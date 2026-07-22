@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Behind Render's load balancer TLS is terminated at the edge and the
+        // real scheme arrives in X-Forwarded-Proto. Without this Laravel builds
+        // http:// URLs and the admin panel hits redirect loops / mixed content.
+        $middleware->trustProxies(at: '*');
+
         // Don't redirect unauthenticated API requests to a 'login' route
         // (there isn't one) — let them surface as a 401 JSON response.
         $middleware->redirectGuestsTo(

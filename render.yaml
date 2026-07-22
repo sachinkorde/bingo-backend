@@ -1,0 +1,88 @@
+# Render.com blueprint — FREE tier setup.
+#
+# Deliberately has NO `databases:` block and NO cron service, because:
+#   • Render's own free Postgres is deleted after ~30 days. We use a free
+#     Neon (or Supabase) Postgres instead via a single DB_URL, which persists.
+#   • Render cron jobs are a paid feature. A free external pinger hitting
+#     /api/server-time every minute does the same job AND keeps the free
+#     web service from spinning down.
+#
+# See DEPLOY_RENDER.md for the full walkthrough and the paid upgrade path.
+
+services:
+  - type: web
+    name: bingo-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore     # closest Render region to India
+    healthCheckPath: /up
+    autoDeploy: true
+    envVars:
+      # ── Secrets you paste into the Render dashboard ──
+      # php artisan key:generate --show
+      - key: APP_KEY
+        sync: false
+      # Your https://<name>.onrender.com URL (set after the first deploy)
+      - key: APP_URL
+        sync: false
+      # Full Neon/Supabase connection string, e.g.
+      # postgresql://user:pass@ep-xxx.aws.neon.tech/bingo?sslmode=require
+      - key: DB_URL
+        sync: false
+      # Owner login, created automatically on boot (free plan has no Shell).
+      - key: SUPERADMIN_EMAIL
+        sync: false
+      - key: SUPERADMIN_PASSWORD
+        sync: false
+      - key: SUPERADMIN_NAME
+        value: Owner
+
+      - key: APP_NAME
+        value: "Real Bingo"
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: "false"
+
+      # Ephemeral disk — logs must go to Render's log stream, not a file.
+      - key: LOG_CHANNEL
+        value: stderr
+      - key: LOG_LEVEL
+        value: error
+
+      - key: DB_CONNECTION
+        value: pgsql
+      - key: DB_SSLMODE
+        value: require
+
+      - key: SESSION_DRIVER
+        value: database
+      - key: SESSION_SECURE_COOKIE
+        value: "true"
+      - key: CACHE_STORE
+        value: database
+      - key: QUEUE_CONNECTION
+        value: database
+
+      # ── Game rules ──
+      - key: GAME_NUMBERS
+        value: "10"
+      - key: GAME_PAYOUT_MULTIPLIER
+        value: "9"
+      - key: GAME_SESSION_SECONDS
+        value: "60"
+      - key: GAME_BETTING_SECONDS
+        value: "55"
+      - key: GAME_SPIN_SECONDS
+        value: "5"
+      - key: GAME_MIN_BET
+        value: "10"
+      - key: GAME_MAX_BET_PER_NUMBER
+        value: "100000"
+      - key: GAME_MAX_PAYOUT_PER_ROUND
+        value: "500000"
+      - key: GAME_STARTING_BALANCE
+        value: "0"
+      - key: REFERRAL_BONUS
+        value: "50"
