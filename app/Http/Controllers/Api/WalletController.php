@@ -98,24 +98,62 @@ class WalletController extends Controller
     }
 
     /**
-     * Send money to another player by mobile or email. Atomic: debits the
-     * sender and credits the recipient in one transaction (both ledgered).
+     * Look up a transfer recipient WITHOUT moving any money, so the player can
+     * confirm who they are about to pay. Transfers are irreversible — sending
+     * to a mistyped number should be catchable before it happens, not after.
+     *
+     * Returns masked details only: enough to recognise your friend, not enough
+     * to harvest the contact details of strangers.
+     */
+    public function lookupRecipient(Request $request)
+    {
+        $data = $request->validate([
+            'recipient' => ['required', 'string'],
+        ]);
+
+        $sender = $request->user();
+        $recipient = $this->findRecipient($data['recipient']);
+
+        if (! $recipient) {
+            return $this->fail('No player found with that mobile, email or username.', 404);
+        }
+        if ($recipient->id === $sender->id) {
+            return $this->fail('You cannot transfer to yourself.', 422);
+        }
+        if ($recipient->status !== 'active') {
+            return $this->fail('That account is not active.', 422);
+        }
+
+        return $this->ok([
+            'name' => $recipient->name ?: 'Player',
+            'mobile_masked' => $this->maskMobile($recipient->mobile),
+            'username' => $recipient->referral_code,
+        ], 'Recipient found');
+    }
+
+    /**
+     * Send points to another player by mobile, email or username (referral
+     * code). Atomic: debits the sender and credits the recipient in one
+     * transaction (both ledgered).
      */
     public function transfer(Request $request, WalletService $wallets)
     {
+        $min = (float) config('game.transfer_min', 10);
+
         $data = $request->validate([
-            'recipient' => ['required', 'string'], // mobile or email of the receiver
-            'amount' => ['required', 'numeric', 'min:1'],
+            // mobile, email, or username (referral code) of the receiver
+            'recipient' => ['required', 'string'],
+            'amount' => ['required', 'numeric', 'min:' . $min],
+        ], [
+            'amount.min' => "Minimum transfer is {$min}.",
         ]);
 
         $sender = $request->user();
 
-        $recipient = User::where('mobile', $data['recipient'])
-            ->orWhere('email', $data['recipient'])
-            ->first();
+        $recipient = $this->findRecipient($data['recipient']);
 
         if (! $recipient) {
-            return $this->fail('Recipient not found.', 404);
+            return $this->fail('No player found with that mobile, email or username.', 404);
         }
         if ($recipient->id === $sender->id) {
             return $this->fail('You cannot transfer to yourself.', 422);
@@ -125,6 +163,24 @@ class WalletController extends Controller
         }
 
         $amount = number_format((float) $data['amount'], 2, '.', '');
+
+        // Daily cap: bounds the damage from a compromised account.
+        $cap = (float) config('game.transfer_max_per_day', 0);
+        if ($cap > 0) {
+            $sentToday = (float) Transfer::where('sender_id', $sender->id)
+                ->where('status', 'completed')
+                ->whereDate('created_at', now()->toDateString())
+                ->sum('amount');
+
+            if (($sentToday + (float) $amount) > $cap) {
+                $left = max(0, $cap - $sentToday);
+
+                return $this->fail(
+                    "Daily transfer limit reached. You can still send {$left} today.",
+                    422
+                );
+            }
+        }
 
         // Atomic: if the sender lacks funds, debit() throws and the whole
         // transaction (including the transfer row) rolls back.
@@ -145,6 +201,37 @@ class WalletController extends Controller
         return $this->ok([
             'transfer_id' => $transfer->id,
             'balance' => $wallets->balance($sender),
+            'amount' => $amount,
+            'recipient_name' => $recipient->name ?: 'Player',
+            'recipient_masked' => $this->maskMobile($recipient->mobile),
         ], 'Transfer successful.');
+    }
+
+    /**
+     * Resolve a transfer target from a mobile, an email, or a username
+     * (referral code). All three are unique.
+     *
+     * `name` is deliberately NOT searchable: names are not unique, so a name
+     * lookup could silently send someone's money to the wrong player.
+     */
+    private function findRecipient(string $identifier): ?User
+    {
+        $identifier = trim($identifier);
+
+        return User::where(function ($query) use ($identifier) {
+            $query->where('mobile', $identifier)
+                ->orWhere('email', $identifier)
+                ->orWhere('referral_code', strtoupper($identifier));
+        })->first();
+    }
+
+    /** 9876543210 -> 98••••3210 */
+    private function maskMobile(?string $mobile): string
+    {
+        if (! $mobile || strlen($mobile) < 6) {
+            return '••••';
+        }
+
+        return substr($mobile, 0, 2) . str_repeat('•', strlen($mobile) - 6) . substr($mobile, -4);
     }
 }

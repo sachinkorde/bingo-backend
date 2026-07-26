@@ -39,10 +39,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('bank-detail', [BankController::class, 'update']);
 
     // Wallet
+    // Money-moving endpoints are throttled: without a limit a stolen token can
+    // drain a wallet, or hammer the deposit/transfer paths, as fast as the
+    // network allows.
     Route::get('wallet/balance', [WalletController::class, 'balance']);
-    Route::post('add-amount', [WalletController::class, 'addAmount']);
-    Route::post('withdraw', [WalletController::class, 'withdraw']);
-    Route::post('transfer', [WalletController::class, 'transfer']);
+    Route::post('add-amount', [WalletController::class, 'addAmount'])->middleware('throttle:20,1');
+    Route::post('withdraw', [WalletController::class, 'withdraw'])->middleware('throttle:10,1');
+
+    // Look up who you are about to pay BEFORE paying them.
+    Route::get('transfer/lookup', [WalletController::class, 'lookupRecipient'])->middleware('throttle:20,1');
+    Route::post('transfer', [WalletController::class, 'transfer'])->middleware('throttle:10,1');
 
     // Game
     Route::get('round/current', [GameController::class, 'currentRound']);

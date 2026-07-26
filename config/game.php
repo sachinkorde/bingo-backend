@@ -28,6 +28,17 @@ return [
 
     'starting_balance' => (float) env('GAME_STARTING_BALANCE', 0),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Player-to-player transfers
+    |--------------------------------------------------------------------------
+    | Transfers are irreversible, so they are bounded. The daily cap limits the
+    | damage from a stolen account and makes bulk value-shuffling between
+    | colluding accounts obvious rather than silent.
+    */
+    'transfer_min' => (float) env('TRANSFER_MIN', 10),
+    'transfer_max_per_day' => (float) env('TRANSFER_MAX_PER_DAY', 50000),
+
     // Paid to the inviter when their invitee makes a first successful deposit.
     'referral_bonus' => (float) env('REFERRAL_BONUS', 50),
 
