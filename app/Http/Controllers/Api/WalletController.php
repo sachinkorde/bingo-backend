@@ -79,16 +79,29 @@ class WalletController extends Controller
             return $this->fail('Add your bank/UPI details before withdrawing.', 422);
         }
 
-        // Hold the funds now (throws InsufficientBalanceException -> 422).
-        $wallets->debit($user, $data['amount'], 'withdraw', null, ['method' => $data['method'] ?? 'bank']);
+        $amount = number_format((float) $data['amount'], 2, '.', '');
+        $method = $data['method'] ?? 'bank';
 
-        $withdrawal = Withdrawal::create([
-            'user_id' => $user->id,
-            'amount' => number_format((float) $data['amount'], 2, '.', ''),
-            'method' => $data['method'] ?? 'bank',
-            'bank_detail_id' => $bank->id,
-            'status' => 'pending',
-        ]);
+        // Atomic: the debit and the withdrawal row must land together. Debiting
+        // outside a transaction meant a failure while writing the withdrawal
+        // left the player's money gone with no request to approve or refund.
+        // The ledger entry is also tagged with the withdrawal id so the hold can
+        // always be traced back (it used to be recorded with a null reference).
+        $withdrawal = DB::transaction(function () use ($user, $amount, $method, $bank, $wallets) {
+            $w = Withdrawal::create([
+                'user_id' => $user->id,
+                'amount' => $amount,
+                'method' => $method,
+                'bank_detail_id' => $bank->id,
+                'status' => 'pending',
+            ]);
+
+            // Holds the funds (throws InsufficientBalanceException -> 422,
+            // rolling the withdrawal row back with it).
+            $wallets->debit($user, $amount, 'withdraw', "withdrawal:{$w->id}", ['method' => $method]);
+
+            return $w;
+        });
 
         return $this->ok([
             'withdrawal_id' => $withdrawal->id,
