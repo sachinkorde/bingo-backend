@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\Gamers\Tables;
 
+use App\Models\Gamer;
+use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -33,6 +35,12 @@ class GamersTable
                     ->searchable(),
                 ImageColumn::make('profile_image'),
                 TextColumn::make('kyc_status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'verified' => 'success',
+                        'rejected' => 'danger',
+                        default => 'warning',
+                    })
                     ->searchable(),
                 TextColumn::make('created_at')
                     ->dateTime()
@@ -47,6 +55,25 @@ class GamersTable
                 //
             ])
             ->recordActions([
+                // One click, exact value. Typing the status by hand risked
+                // "Verified"/"VERIFIED", which fails the strict === 'verified'
+                // check in WalletController::withdraw and silently keeps the
+                // player locked out of withdrawals.
+                Action::make('verifyKyc')
+                    ->label('Verify KYC')
+                    ->icon('heroicon-o-check-badge')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalDescription('Confirm the Aadhaar/PAN documents match this player before verifying. Verified players can request withdrawals.')
+                    ->visible(fn (Gamer $record): bool => $record->kyc_status !== 'verified')
+                    ->action(fn (Gamer $record) => $record->update(['kyc_status' => 'verified'])),
+                Action::make('rejectKyc')
+                    ->label('Reject KYC')
+                    ->icon('heroicon-o-x-circle')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (Gamer $record): bool => $record->kyc_status !== 'rejected')
+                    ->action(fn (Gamer $record) => $record->update(['kyc_status' => 'rejected'])),
                 EditAction::make(),
             ])
             ->toolbarActions([

@@ -28,7 +28,14 @@ class GamerForm
                 TextInput::make('pan_document'),
                 FileUpload::make('profile_image')
                     ->image(),
-                TextInput::make('kyc_status')
+                // A Select, not free text: withdrawals check for exactly
+                // 'verified', so a typo here locks the player out silently.
+                Select::make('kyc_status')
+                    ->options([
+                        'pending' => 'Pending',
+                        'verified' => 'Verified',
+                        'rejected' => 'Rejected',
+                    ])
                     ->required()
                     ->default('pending'),
             ]);
