@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BankController;
 use App\Http\Controllers\Api\GameController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\ReferralController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Support\Facades\Route;
 
@@ -37,6 +38,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Bank details
     Route::get('bank-detail', [BankController::class, 'show']);
     Route::post('bank-detail', [BankController::class, 'update']);
+
+    // Refer & Earn / My Referrals
+    Route::get('referrals/summary', [ReferralController::class, 'summary']);
+    Route::get('referrals', [ReferralController::class, 'list']);
 
     // Wallet
     // Money-moving endpoints are throttled: without a limit a stolen token can

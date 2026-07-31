@@ -76,6 +76,12 @@ class User extends Authenticatable
         return $this->hasMany(Withdrawal::class);
     }
 
+    /** Everyone who signed up using THIS user's referral code. */
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by', 'referral_code');
+    }
+
     // ── Helpers ──────────────────────────────────────────────────────
     public function isAdmin(): bool
     {
@@ -114,6 +120,12 @@ class User extends Authenticatable
     {
         // Positive = player is up (house down); negative = player is down.
         return bcsub($this->totalWon(), $this->totalWagered(), 2);
+    }
+
+    /** Total referral bonus this user has ever been PAID as an inviter. */
+    public function referralEarnings(): string
+    {
+        return (string) $this->walletTransactions()->where('type', 'referral_bonus')->sum('amount');
     }
 
     // ── Suspicious-activity heuristics (tune thresholds as needed) ──────────
