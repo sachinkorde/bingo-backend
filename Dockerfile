@@ -30,7 +30,15 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && a2enmod rewrite headers \
     && rm -rf /var/lib/apt/lists/*
 
-# Production PHP settings
+# Production PHP settings.
+#
+# upload_max_filesize / post_max_size are sized for APK uploads in the admin
+# panel. A file larger than these is rejected by PHP before any application
+# code runs, so the browser shows the upload reaching 100% and then hanging
+# with no error message at all.
+#
+# max_execution_time / max_input_time cover a large upload arriving over a
+# slow connection; the 30s and 60s defaults cut it off mid-transfer.
 RUN { \
         echo 'opcache.enable=1'; \
         echo 'opcache.memory_consumption=128'; \
@@ -38,8 +46,10 @@ RUN { \
         echo 'opcache.validate_timestamps=0'; \
         echo 'expose_php=Off'; \
         echo 'memory_limit=512M'; \
-        echo 'upload_max_filesize=16M'; \
-        echo 'post_max_size=16M'; \
+        echo 'upload_max_filesize=256M'; \
+        echo 'post_max_size=256M'; \
+        echo 'max_execution_time=300'; \
+        echo 'max_input_time=300'; \
     } > /usr/local/etc/php/conf.d/zz-app.ini
 
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
