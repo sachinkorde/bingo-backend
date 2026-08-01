@@ -20,3 +20,7 @@ database/*.sqlite
 .phpunit.cache
 tests
 *.md
+
+# Release APKs are served from GitHub's public URL, not from this server —
+# copying them into the image would add ~50MB per release to every build.
+build_for_git
