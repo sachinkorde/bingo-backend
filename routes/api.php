@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BankController;
+use App\Http\Controllers\Api\AppVersionController;
 use App\Http\Controllers\Api\GameController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReferralController;
@@ -18,6 +19,10 @@ use Illuminate\Support\Facades\Route;
 // Lightweight clock sync (no auth) — the app/dashboard call this ONCE then count
 // locally, so the timer is identical on every device with no per-second traffic.
 Route::get('server-time', [GameController::class, 'serverTime']);
+
+// Version gate. Public because a build old enough to be blocked may not be
+// able to log in at all, so this must work before authentication.
+Route::get('app-version', [AppVersionController::class, 'show']);
 
 Route::post('register', [AuthController::class, 'register'])->middleware('throttle:10,1');
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');

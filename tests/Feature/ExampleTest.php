@@ -2,11 +2,15 @@
 
 namespace Tests\Feature;
 
-// use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 class ExampleTest extends TestCase
 {
+    // The landing page now reads the published app release from the database,
+    // so this needs a migrated schema.
+    use RefreshDatabase;
+
     /**
      * A basic test example.
      */
