@@ -13,6 +13,13 @@ class ProfileController extends Controller
     {
         $user = $request->user();
 
+        // Guarantee a gamer row exists, same as update() already does. Without
+        // this, an account with no profile data yet — e.g. a player created
+        // directly from the admin panel, which has no gamer-creation hook the
+        // way registration does — returns `gamer: null`, and any client code
+        // that assumes it's always present breaks.
+        $user->gamer()->firstOrCreate(['user_id' => $user->id]);
+
         return $this->ok($this->payload($user), 'Profile loaded!', [
             'is_disabled' => $user->status !== 'active',
             'is_deleted' => false,
