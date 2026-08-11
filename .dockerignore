@@ -21,6 +21,7 @@ database/*.sqlite
 tests
 *.md
 
-# Release APKs are served from GitHub's public URL, not from this server —
-# copying them into the image would add ~50MB per release to every build.
-build_for_git
+# build_for_git IS shipped in the image on purpose: the repository is private,
+# so GitHub links 404 for players. The APK is served from this server instead
+# (see the /download/apk route). Keep only ONE build in that folder — each one
+# adds its full size to every image build.
