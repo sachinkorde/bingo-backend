@@ -192,4 +192,18 @@ class AuthController extends Controller
 
         return $code;
     }
+
+    public function checkUsername(Request $request)
+    {
+        $data = $request->validate([
+            'username' => ['required', 'string'],
+        ]);
+
+        $user = User::where('username', $data['username'])->first();
+        if ($user) {
+            return $this->fail('Username already exists.', 422);
+        }
+
+        return $this->ok(null, 'Username available!');
+    }
 }

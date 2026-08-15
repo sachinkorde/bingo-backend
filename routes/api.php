@@ -28,6 +28,7 @@ Route::post('register', [AuthController::class, 'register'])->middleware('thrott
 Route::post('login', [AuthController::class, 'login'])->middleware('throttle:10,1');
 Route::post('send-otp', [AuthController::class, 'sendOtp'])->middleware('throttle:6,1');
 Route::post('forgot-password', [AuthController::class, 'forgotPassword'])->middleware('throttle:10,1');
+Route::get('check-username', [AuthController::class, 'checkUsername']);
 
 // ── Authenticated ─────────────────────────────────────────────────────────
 Route::middleware('auth:sanctum')->group(function () {
