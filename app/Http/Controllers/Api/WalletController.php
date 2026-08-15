@@ -234,6 +234,7 @@ class WalletController extends Controller
         return User::where(function ($query) use ($identifier) {
             $query->where('mobile', $identifier)
                 ->orWhere('email', $identifier)
+                ->orWhere('username', $identifier)
                 ->orWhere('referral_code', strtoupper($identifier));
         })->first();
     }

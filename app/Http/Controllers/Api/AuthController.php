@@ -52,6 +52,7 @@ class AuthController extends Controller
     public function register(Request $request, OtpService $otp, WalletService $wallets)
     {
         $data = $request->validate([
+            'username' => ['nullable', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', 'unique:users,username'],
             'mobile' => ['required', 'string', 'regex:/^[6-9]\d{9}$/', 'unique:users,mobile'],
             'email' => ['nullable', 'email', 'unique:users,email'],
             'password' => ['required', 'string', 'min:6'],
@@ -59,6 +60,10 @@ class AuthController extends Controller
             'otp' => ['required', 'string'],
             'referral' => ['nullable', 'string'],
         ], [
+            'username.min' => 'Username must be at least 3 characters.',
+            'username.max' => 'Username cannot exceed 30 characters.',
+            'username.regex' => 'Username may only contain letters, numbers, and underscores.',
+            'username.unique' => 'This username is already taken.',
             'mobile.required' => 'Please enter your mobile number.',
             'mobile.regex' => 'Enter a valid 10-digit mobile number.',
             'mobile.unique' => 'This mobile number is already registered.',
@@ -80,6 +85,7 @@ class AuthController extends Controller
 
         $user = DB::transaction(function () use ($data, $referredBy, $wallets) {
             $user = User::create([
+                'username' => $data['username'] ?? null,
                 'mobile' => $data['mobile'],
                 'email' => $data['email'] ?? null,
                 'password' => $data['password'], // 'hashed' cast handles bcrypt
@@ -99,7 +105,7 @@ class AuthController extends Controller
     }
 
     /**
-     * Login with mobile or email + password.
+     * Login with mobile, email or username + password.
      */
     public function login(Request $request)
     {
@@ -110,6 +116,7 @@ class AuthController extends Controller
 
         $user = User::where('mobile', $data['credential'])
             ->orWhere('email', $data['credential'])
+            ->orWhere('username', $data['credential'])
             ->first();
 
         if (! $user || ! Hash::check($data['password'], $user->password)) {

@@ -124,4 +124,79 @@ class AuthTest extends TestCase
             'password' => 'NewPass@123',
         ])->assertOk();
     }
+
+    public function test_register_and_login_with_username(): void
+    {
+        $mobile = '9876543211';
+        $otp = app(OtpService::class)->generate($mobile, 'register');
+
+        $register = $this->postJson('/api/register', [
+            'username' => 'player_one',
+            'mobile' => $mobile,
+            'email' => 'playerone@example.com',
+            'password' => 'Bingo@123',
+            'confirm_password' => 'Bingo@123',
+            'otp' => $otp,
+        ]);
+
+        $register->assertOk()->assertJson(['success' => true]);
+        $this->assertDatabaseHas('users', ['mobile' => $mobile, 'username' => 'player_one']);
+
+        // Login using username credential
+        $login = $this->postJson('/api/login', [
+            'credential' => 'player_one',
+            'password' => 'Bingo@123',
+        ]);
+
+        $login->assertOk()->assertJson(['success' => true]);
+        $this->assertNotEmpty($login->json('data.token'));
+    }
+
+    public function test_register_rejects_duplicate_username(): void
+    {
+        $mobile1 = '9876543211';
+        $otp1 = app(OtpService::class)->generate($mobile1, 'register');
+        $this->postJson('/api/register', [
+            'username' => 'unique_gamer',
+            'mobile' => $mobile1,
+            'password' => 'Bingo@123',
+            'confirm_password' => 'Bingo@123',
+            'otp' => $otp1,
+        ])->assertOk();
+
+        $mobile2 = '9876543212';
+        $otp2 = app(OtpService::class)->generate($mobile2, 'register');
+        $res = $this->postJson('/api/register', [
+            'username' => 'unique_gamer',
+            'mobile' => $mobile2,
+            'password' => 'Bingo@123',
+            'confirm_password' => 'Bingo@123',
+            'otp' => $otp2,
+        ]);
+
+        $res->assertStatus(422)
+            ->assertJson(['success' => false])
+            ->assertJsonPath('message', 'This username is already taken.');
+    }
+
+    public function test_check_username_endpoint(): void
+    {
+        $this->getJson('/api/check-username?username=available_user')
+            ->assertOk()
+            ->assertJson(['success' => true, 'message' => 'Username available!']);
+
+        $mobile = '9876543211';
+        $otp = app(OtpService::class)->generate($mobile, 'register');
+        $this->postJson('/api/register', [
+            'username' => 'available_user',
+            'mobile' => $mobile,
+            'password' => 'Bingo@123',
+            'confirm_password' => 'Bingo@123',
+            'otp' => $otp,
+        ])->assertOk();
+
+        $this->getJson('/api/check-username?username=available_user')
+            ->assertStatus(422)
+            ->assertJson(['success' => false, 'message' => 'Username already exists.']);
+    }
 }
