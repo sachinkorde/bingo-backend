@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Otp;
+use App\Models\Setting;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -18,7 +19,13 @@ class OtpService
 {
     public function generate(string $mobile, string $module): string
     {
-        $otp = (string) random_int(100000, 999999);
+        $digits = (int) Setting::get('otp_digits', config('game.otp_digits', 6));
+        $digits = in_array($digits, [4, 6], true) ? $digits : 6;
+
+        $min = $digits === 4 ? 1000 : 100000;
+        $max = $digits === 4 ? 9999 : 999999;
+
+        $otp = (string) random_int($min, $max);
 
         Otp::create([
             'mobile' => $mobile,

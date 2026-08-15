@@ -18,5 +18,13 @@ class SettingsSeeder extends Seeder
                 'label' => 'Referral bonus (₹ paid to the inviter on their invitee\'s first deposit)',
             ]
         );
+
+        Setting::firstOrCreate(
+            ['key' => 'otp_digits'],
+            [
+                'value' => (string) config('game.otp_digits', 6),
+                'label' => 'OTP length in digits (4 or 6)',
+            ]
+        );
     }
 }

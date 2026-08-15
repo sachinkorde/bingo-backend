@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Settings\Schemas;
 
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 
@@ -17,9 +18,18 @@ class SettingForm
                     ->disabled(),
                 TextInput::make('key')
                     ->disabled(),
+                Select::make('value')
+                    ->label('Value')
+                    ->options([
+                        '4' => '4 Digits',
+                        '6' => '6 Digits',
+                    ])
+                    ->required()
+                    ->visible(fn ($record) => $record?->key === 'otp_digits'),
                 TextInput::make('value')
                     ->label('Value')
-                    ->required(),
+                    ->required()
+                    ->visible(fn ($record) => $record?->key !== 'otp_digits'),
             ]);
     }
 }

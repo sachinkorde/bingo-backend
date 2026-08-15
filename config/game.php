@@ -42,6 +42,7 @@ return [
     // Paid to the inviter when their invitee makes a first successful deposit.
     'referral_bonus' => (float) env('REFERRAL_BONUS', 50),
 
+    'otp_digits' => (int) env('OTP_DIGITS', 6),
     'otp_ttl_seconds' => (int) env('OTP_TTL_SECONDS', 300),
     'otp_max_attempts' => (int) env('OTP_MAX_ATTEMPTS', 5),
 

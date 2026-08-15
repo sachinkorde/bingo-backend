@@ -199,4 +199,26 @@ class AuthTest extends TestCase
             ->assertStatus(422)
             ->assertJson(['success' => false, 'message' => 'Username already exists.']);
     }
+
+    public function test_otp_length_configurable_4_or_6_digits(): void
+    {
+        // Default (6 digits)
+        \App\Models\Setting::put('otp_digits', '6');
+        $otp6 = app(OtpService::class)->generate('9876543299', 'register');
+        $this->assertEquals(6, strlen($otp6));
+
+        // 4 digits toggle
+        \App\Models\Setting::put('otp_digits', '4');
+        $otp4 = app(OtpService::class)->generate('9876543298', 'register');
+        $this->assertEquals(4, strlen($otp4));
+
+        // Verification with 4 digit OTP
+        $register = $this->postJson('/api/register', [
+            'mobile' => '9876543298',
+            'password' => 'Bingo@123',
+            'confirm_password' => 'Bingo@123',
+            'otp' => $otp4,
+        ]);
+        $register->assertOk()->assertJson(['success' => true]);
+    }
 }
