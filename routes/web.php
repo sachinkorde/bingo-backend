@@ -15,8 +15,13 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('landing', [
         'version' => AppVersion::current(),
+        'ref' => request('ref'),
     ]);
 })->name('home');
+
+Route::get('/ref/{code}', function (string $code) {
+    return redirect()->route('download.apk', ['ref' => $code]);
+})->name('referral.link');
 
 /*
  * Direct APK download, served from this server.

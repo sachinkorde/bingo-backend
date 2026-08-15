@@ -27,6 +27,7 @@ class ReferralController extends Controller
 
         return $this->ok([
             'referral_code' => $user->referral_code,
+            'share_link' => url('/ref/' . $user->referral_code),
             'referral_bonus' => number_format($bonus, 2, '.', ''),
             'total_referred' => $user->referrals()->count(),
             'total_earned' => number_format((float) $user->referralEarnings(), 2, '.', ''),

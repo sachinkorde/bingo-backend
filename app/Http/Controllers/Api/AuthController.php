@@ -58,6 +58,7 @@ class AuthController extends Controller
             'password' => ['required', 'string', 'min:6'],
             'confirm_password' => ['required', 'same:password'],
             'otp' => ['required', 'string'],
+            'agent_id' => ['nullable', 'string'],
             'referral' => ['nullable', 'string'],
         ], [
             'username.min' => 'Username must be at least 3 characters.',
@@ -78,9 +79,12 @@ class AuthController extends Controller
             return $this->fail('Invalid or expired OTP.', 422);
         }
 
+        $agentId = $data['agent_id'] ?? $data['referral'] ?? $request->input('ref') ?? null;
         $referredBy = null;
-        if (! empty($data['referral'])) {
-            $referredBy = User::where('referral_code', $data['referral'])->value('referral_code');
+        if (! empty($agentId)) {
+            $referredBy = User::where('referral_code', $agentId)
+                ->orWhere('username', $agentId)
+                ->value('referral_code');
         }
 
         $user = DB::transaction(function () use ($data, $referredBy, $wallets) {

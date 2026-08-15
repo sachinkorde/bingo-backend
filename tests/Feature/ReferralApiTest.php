@@ -79,4 +79,48 @@ class ReferralApiTest extends TestCase
 
         $this->assertTrue($inviter->referrals()->whereKey($invitee->id)->exists());
     }
+
+    public function test_summary_includes_share_link(): void
+    {
+        [$inviterToken, $inviter] = $this->register('9876550006');
+        $res = $this->withToken($inviterToken)->getJson('/api/referrals/summary')->assertOk();
+
+        $this->assertStringContainsString('/ref/' . $inviter->referral_code, $res->json('data.share_link'));
+    }
+
+    public function test_referral_link_web_redirect(): void
+    {
+        $res = $this->get('/ref/TRB12345');
+        $res->assertRedirect(route('download.apk', ['ref' => 'TRB12345']));
+    }
+
+    public function test_agent_id_auto_referral_attribution_and_first_deposit_bonus(): void
+    {
+        [$inviterToken, $inviter] = $this->register('9876550007');
+
+        // Register using agent_id captured from deep link
+        $otp = app(OtpService::class)->generate('9876550008', 'register');
+        $reg = $this->postJson('/api/register', [
+            'mobile' => '9876550008',
+            'password' => 'Bingo@123',
+            'confirm_password' => 'Bingo@123',
+            'otp' => $otp,
+            'agent_id' => $inviter->referral_code,
+        ])->assertOk();
+
+        $invitee = User::where('mobile', '9876550008')->firstOrFail();
+        $this->assertSame($inviter->referral_code, $invitee->referred_by);
+
+        // Deposit approval triggers first deposit bonus to inviter
+        $deposit = \App\Models\Deposit::create([
+            'user_id' => $invitee->id,
+            'amount' => '500.00',
+            'source' => 'bank',
+            'status' => 'pending',
+        ]);
+
+        app(\App\Services\DepositService::class)->approve($deposit);
+
+        $this->assertEquals(50.0, (float) $inviter->referralEarnings());
+    }
 }
