@@ -370,7 +370,7 @@ class GameTest extends TestCase
         $jPoolAfterDebit = (float) HouseWallet::jPool()->fresh()->balance;
         // J-Pool debited ₹2,000 for payout; then receives 10% of net profit.
         // Net profit = 2100 - 2000 = 100. 10% = 10. So final = 10000 - 2000 + 10 = 8010.
-        $this->assertEquals('8010.00', number_format($jPoolAfterDebit, 2));
+        $this->assertEquals('8010.00', number_format($jPoolAfterDebit, 2, '.', ''));
     }
 
     public function test_profit_distributed_to_house_wallets_on_number_win(): void
