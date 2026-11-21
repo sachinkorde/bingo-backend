@@ -180,7 +180,7 @@ class RoundService
 
             // Determine winner.
             $jWins   = $this->shouldJWin($bets, $totalBet, $round->slot_no);
-            $winning = $jWins ? self::J : $this->selectWinningNumber($bets);
+            $winning = $jWins ? self::J : $this->selectWinningNumber($bets, $round);
 
             $multiplier  = $jWins
                 ? (int) config('game.j_multiplier', 20)
@@ -370,28 +370,43 @@ class RoundService
     // ── Number selection (0–9 fallback) ─────────────────────────────────────
 
     /**
-     * House-safe winning number from 0–9: picks the number with the least
-     * total amount wagered. Zero-bet numbers cost nothing → always preferred.
-     * Tiebreak: lowest index.
+     * House-safe winning number from 0–9:
+     * - If no bets were placed, picks a random number 0-9 using the round's seed.
+     * - If bets were placed, picks the number with the least total amount wagered.
+     * - If multiple numbers tie for the least bet, picks randomly among those candidates.
      */
-    protected function selectWinningNumber(Collection $bets): int
+    protected function selectWinningNumber(Collection $bets, ?Round $round = null): int
     {
-        // Always evaluate 0–9 only; J (10) is handled separately.
-        $totals = array_fill(0, 10, '0.00');
+        // Filter to 0-9 bets only (skip J=10)
+        $numberBets = $bets->filter(fn ($b) => (int) $b->number < 10);
 
-        foreach ($bets as $bet) {
+        // If no bets placed on 0-9, return a random number using round seed or random_int
+        if ($numberBets->isEmpty()) {
+            return $round ? $this->deriveWinningNumber($round) : random_int(0, 9);
+        }
+
+        $totals = array_fill(0, 10, '0.00');
+        foreach ($numberBets as $bet) {
             $n = (int) $bet->number;
-            if ($n >= 10) {
-                continue; // skip J bets
-            }
             $totals[$n] = bcadd($totals[$n], (string) $bet->amount, 2);
         }
 
         $min        = min($totals);
         $candidates = array_keys(array_filter($totals, fn ($v) => $v == $min));
-        sort($candidates);
 
-        return $candidates[0];
+        if (count($candidates) === 1) {
+            return $candidates[0];
+        }
+
+        // When multiple numbers tie for the lowest bet, pick pseudo-randomly among them using the seed
+        if ($round) {
+            $hash = hash('sha256', $round->server_seed . ':' . $round->slot_no . ':tie');
+            $idx  = (int) (hexdec(substr($hash, 0, 8)) % count($candidates));
+
+            return $candidates[$idx];
+        }
+
+        return $candidates[array_rand($candidates)];
     }
 
     // ── Serialization helpers ────────────────────────────────────────────────

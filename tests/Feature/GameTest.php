@@ -81,7 +81,7 @@ class GameTest extends TestCase
         $slotNo  = $session['slot_no'];
 
         // Bet ₹100 on number 0 only.
-        // Numbers 1-9 all have ₹0 → winner = 1 (lowest zero-bet number).
+        // Numbers 1-9 all have ₹0 → one of numbers 1-9 will win (lowest bet liability).
         $bid = $this->withToken($token)->postJson('/api/place-bid', [
             'slot_no' => $slotNo,
             'bids'    => json_encode([['0' => 100]]),
@@ -95,7 +95,10 @@ class GameTest extends TestCase
 
         $result = $this->withToken($token)->getJson("/api/round/{$slotId}/result");
         $result->assertOk();
-        $this->assertEquals(1, $result->json('data.winning_number'));
+        // Number 0 had a bet; numbers 1-9 had zero bets, so the winner must be from 1-9.
+        $winningNum = (int) $result->json('data.winning_number');
+        $this->assertContains($winningNum, range(1, 9));
+        $this->assertNotEquals(0, $winningNum);
         $balance = $this->withToken($token)->getJson('/api/wallet/balance')->json('data.balance');
         $this->assertEquals('900.00', $balance);
     }
@@ -108,7 +111,7 @@ class GameTest extends TestCase
         $slotId  = $session['slot_id'];
         $slotNo  = $session['slot_no'];
 
-        // Bet ₹100 on every number 0-9. All totals equal → winner = 0 (tiebreak).
+        // Bet ₹100 on every number 0-9. All totals equal → a random candidate 0-9 wins.
         $bids = [];
         for ($i = 0; $i < 10; $i++) {
             $bids[(string) $i] = 100;
@@ -123,8 +126,8 @@ class GameTest extends TestCase
 
         $result = $this->withToken($token)->getJson("/api/round/{$slotId}/result");
         $result->assertOk();
-        $this->assertEquals(0, $result->json('data.winning_number'));
-        // ₹100 on 0 → 9× → ₹900 payout. Spent ₹1000. Balance = 10000 - 1000 + 900 = 9900.
+        $this->assertContains((int) $result->json('data.winning_number'), range(0, 9));
+        // ₹100 on winning number → 9× → ₹900 payout. Spent ₹1000. Balance = 10000 - 1000 + 900 = 9900.
         $balance = $this->withToken($token)->getJson('/api/wallet/balance')->json('data.balance');
         $this->assertEquals('9900.00', $balance);
     }
@@ -150,11 +153,21 @@ class GameTest extends TestCase
 
         $result = $this->withToken($token)->getJson("/api/round/{$slotId}/result");
         $result->assertOk();
-        $this->assertEquals(0, $result->json('data.winning_number'));
+        $this->assertContains((int) $result->json('data.winning_number'), range(0, 9));
         $this->assertEquals('90.00', $result->json('data.your_payout'));
 
         $balance = $this->withToken($token)->getJson('/api/wallet/balance')->json('data.balance');
         $this->assertEquals('990.00', $balance);
+    }
+
+    public function test_empty_round_without_bets_picks_random_number(): void
+    {
+        $rounds = app(RoundService::class);
+        $session = $rounds->currentSession();
+
+        $round = $rounds->settle($session);
+        $this->assertNotNull($round->winning_number);
+        $this->assertContains((int) $round->winning_number, range(0, 9));
     }
 
     public function test_bet_rejected_without_funds(): void
