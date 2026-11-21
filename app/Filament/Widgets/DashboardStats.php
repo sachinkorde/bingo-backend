@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Bet;
 use App\Models\Deposit;
+use App\Models\HouseWallet;
 use App\Models\Round;
 use App\Models\User;
 use App\Models\Withdrawal;
@@ -25,24 +26,26 @@ class DashboardStats extends StatsOverviewWidget
     {
         $today = now()->startOfDay();
 
-        $players = User::where('role', 'user')->count();
+        $players      = User::where('role', 'user')->count();
         $playersToday = User::where('role', 'user')->where('created_at', '>=', $today)->count();
 
-        $deposits = (float) Deposit::where('status', 'success')->sum('amount');
+        $deposits      = (float) Deposit::where('status', 'success')->sum('amount');
         $depositsToday = (float) Deposit::where('status', 'success')->where('created_at', '>=', $today)->sum('amount');
 
-        $withdrawals = (float) Withdrawal::whereIn('status', ['approved', 'paid'])->sum('amount');
+        $withdrawals        = (float) Withdrawal::whereIn('status', ['approved', 'paid'])->sum('amount');
         $pendingWithdrawals = Withdrawal::where('status', 'pending')->count();
 
         $betsToday = (float) Bet::where('created_at', '>=', $today)->sum('amount');
 
-        // House earning = total bet - total payout across settled sessions.
-        $totalBet = (float) Round::where('status', 'settled')->sum('total_bet');
+        $totalBet  = (float) Round::where('status', 'settled')->sum('total_bet');
         $totalPaid = (float) Round::where('status', 'settled')->sum('total_payout');
         $earningAll = $totalBet - $totalPaid;
 
         $earnToday = (float) Round::where('status', 'settled')->where('settled_at', '>=', $today)->sum('total_bet')
                    - (float) Round::where('status', 'settled')->where('settled_at', '>=', $today)->sum('total_payout');
+
+        $jPoolBalance    = (float) (HouseWallet::where('type', 'j_pool')->value('balance')      ?? 0);
+        $adminProfitBal  = (float) (HouseWallet::where('type', 'admin_profit')->value('balance') ?? 0);
 
         return [
             Stat::make('Players', number_format($players))
@@ -69,6 +72,16 @@ class DashboardStats extends StatsOverviewWidget
                 ->description('₹' . number_format($earningAll) . ' all-time')
                 ->descriptionIcon('heroicon-m-trophy')
                 ->color($earnToday >= 0 ? 'success' : 'danger'),
+
+            Stat::make('J-Pool balance', '₹' . number_format($jPoolBalance, 2))
+                ->description('Reserved for Joker payouts')
+                ->descriptionIcon('heroicon-m-sparkles')
+                ->color($jPoolBalance > 0 ? 'info' : 'warning'),
+
+            Stat::make('Admin Profit wallet', '₹' . number_format($adminProfitBal, 2))
+                ->description('Accumulated house profits')
+                ->descriptionIcon('heroicon-m-building-library')
+                ->color('success'),
         ];
     }
 }

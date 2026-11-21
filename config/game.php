@@ -11,8 +11,9 @@ return [
     | worst-case loss on any single round (like a casino table limit).
     */
 
-    'numbers' => (int) env('GAME_NUMBERS', 10),                 // slots 0..9
-    'payout_multiplier' => (int) env('GAME_PAYOUT_MULTIPLIER', 9),
+    'numbers'           => (int) env('GAME_NUMBERS', 11),          // slots 0..9 + J=10
+    'payout_multiplier' => (int) env('GAME_PAYOUT_MULTIPLIER', 9), // for numbers 0-9
+    'j_multiplier'      => 20,                                      // J always 20× (not configurable)
 
     // A session is a fixed, clock-aligned window: slot_no = floor(unixtime / session_seconds).
     'session_seconds' => (int) env('GAME_SESSION_SECONDS', 60), // full session length (24/7)

@@ -14,19 +14,25 @@ class Round extends Model
         'betting_closes_at',
         'settled_at',
         'winning_number',
+        'winning_is_j',
         'server_seed',
         'server_seed_hash',
         'total_bet',
         'total_payout',
+        'j_pool_contribution',
+        'admin_profit_amount',
     ];
 
     protected $casts = [
-        'betting_started_at' => 'datetime',
-        'betting_closes_at' => 'datetime',
-        'settled_at' => 'datetime',
-        'winning_number' => 'integer',
-        'total_bet' => 'decimal:2',
-        'total_payout' => 'decimal:2',
+        'betting_started_at'  => 'datetime',
+        'betting_closes_at'   => 'datetime',
+        'settled_at'          => 'datetime',
+        'winning_number'      => 'integer',
+        'winning_is_j'        => 'boolean',
+        'total_bet'           => 'decimal:2',
+        'total_payout'        => 'decimal:2',
+        'j_pool_contribution' => 'decimal:2',
+        'admin_profit_amount' => 'decimal:2',
     ];
 
     public function bets(): HasMany

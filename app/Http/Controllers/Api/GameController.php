@@ -19,23 +19,25 @@ class GameController extends Controller
     public function currentRound(RoundService $rounds)
     {
         $session = $rounds->currentSession();
-        $t = $rounds->timingFor($session);
+        $t       = $rounds->timingFor($session);
 
         return $this->ok([
-            'server_time' => now()->valueOf(),   // ms epoch — sync once, count locally
-            'slot_id' => $session->id,
-            'slot_no' => $session->slot_no,
-            'status' => $session->status,
-            'phase' => $t['phase'],              // 'betting' or 'result'
-            'seconds_left' => $t['phase_seconds_left'],
+            'server_time'       => now()->valueOf(),   // ms epoch — sync once, count locally
+            'slot_id'           => $session->id,
+            'slot_no'           => $session->slot_no,
+            'status'            => $session->status,
+            'phase'             => $t['phase'],        // 'betting' or 'result'
+            'seconds_left'      => $t['phase_seconds_left'],
             'session_seconds_left' => $t['session_seconds_left'],
-            'winning_number' => $rounds->winningNumberFor($session),
-            'server_seed_hash' => $session->server_seed_hash,
-            'numbers' => $rounds->numbers(),
+            'winning_number'    => $rounds->winningNumberFor($session), // "j", 0-9, or null
+            'server_seed_hash'  => $session->server_seed_hash,
+            'numbers'           => $rounds->numbers(),
             'payout_multiplier' => (int) config('game.payout_multiplier', 9),
-            'session_seconds' => $rounds->sessionSeconds(),
-            'betting_seconds' => $rounds->bettingSeconds(),
-            'spin_seconds' => (int) config('game.spin_seconds', 8),
+            'j_multiplier'      => (int) config('game.j_multiplier', 20),
+            'has_j'             => true,
+            'session_seconds'   => $rounds->sessionSeconds(),
+            'betting_seconds'   => $rounds->bettingSeconds(),
+            'spin_seconds'      => (int) config('game.spin_seconds', 5),
         ], 'Current session');
     }
 
@@ -45,34 +47,33 @@ class GameController extends Controller
     public function serverTime(RoundService $rounds)
     {
         $session = $rounds->currentSession();
-        $t = $rounds->timingFor($session);
+        $t       = $rounds->timingFor($session);
 
         return $this->ok([
-            'server_time' => now()->valueOf(),
-            'slot_no' => $session->slot_no,
-            'phase' => $t['phase'],
-            'seconds_left' => $t['phase_seconds_left'],
-            'session_seconds_left' => $t['session_seconds_left'],
-            'session_seconds' => $rounds->sessionSeconds(),
-            'betting_seconds' => $rounds->bettingSeconds(),
+            'server_time'         => now()->valueOf(),
+            'slot_no'             => $session->slot_no,
+            'phase'               => $t['phase'],
+            'seconds_left'        => $t['phase_seconds_left'],
+            'session_seconds_left'=> $t['session_seconds_left'],
+            'session_seconds'     => $rounds->sessionSeconds(),
+            'betting_seconds'     => $rounds->bettingSeconds(),
         ], 'Server time');
     }
 
     /**
      * Place bets for the current round.
-     * Accepts the original contract: slot_id + bids = [{"10":100,"20":50}].
+     * Accepts bid keys as numeric strings OR "j" for the Joker option.
+     * Bids format: [{"j": 100, "0": 50}] or [{"number":"j","amount":100}].
      */
     public function placeBid(Request $request, RoundService $rounds, WalletService $wallets)
     {
         $data = $request->validate([
             'slot_no' => ['required', 'integer'],
-            'bids' => ['required'],
+            'bids'    => ['required'],
         ]);
 
         $round = $rounds->currentSession();
 
-        // The client computes slot_no from the synced clock; make sure it's still
-        // the active session (it may have rolled over between bet and submit).
         if ((string) $data['slot_no'] !== (string) $round->slot_no) {
             return $this->fail('Betting round has changed, please retry.', 409, ['slot_no' => $round->slot_no]);
         }
@@ -80,20 +81,21 @@ class GameController extends Controller
             return $this->fail('Betting is closed for this round.', 422);
         }
 
-        $map = $this->parseBids($data['bids']);
+        $map = $this->parseBids($data['bids'], $rounds);
         if (empty($map)) {
             return $this->fail('No valid bids provided.', 422);
         }
 
-        $numbers = $rounds->numbers();
-        $minBet = (float) config('game.min_bet', 10);
+        $minBet       = (float) config('game.min_bet', 10);
         $maxPerNumber = (float) config('game.max_bet_per_number', 100000);
-        $user = $request->user();
+        $user         = $request->user();
 
         $total = '0';
         foreach ($map as $number => $amount) {
-            if ($number < 0 || $number >= $numbers) {
-                return $this->fail("Invalid number: {$number}", 422);
+            // 0-9 and J=10 are valid; anything else is rejected.
+            if ($number < 0 || $number > RoundService::J) {
+                $label = $number === RoundService::J ? 'J' : $number;
+                return $this->fail("Invalid number: {$label}", 422);
             }
             if ($amount < $minBet) {
                 return $this->fail("Minimum bet is {$minBet}.", 422);
@@ -111,31 +113,28 @@ class GameController extends Controller
             $total = bcadd($total, number_format($amount, 2, '.', ''), 2);
         }
 
-        // Debit + create bet rows atomically so a failure can't take the money
-        // without recording the bets (throws InsufficientBalanceException -> 422).
         DB::transaction(function () use ($wallets, $user, $total, $round, $map) {
             $wallets->debit($user, $total, 'bet', "round:{$round->id}");
 
             foreach ($map as $number => $amount) {
                 Bet::create([
                     'round_id' => $round->id,
-                    'user_id' => $user->id,
-                    'number' => $number,
-                    'amount' => number_format($amount, 2, '.', ''),
+                    'user_id'  => $user->id,
+                    'number'   => $number,
+                    'amount'   => number_format($amount, 2, '.', ''),
                 ]);
             }
         });
 
         return $this->ok([
-            'slot_id' => $round->id,
+            'slot_id'   => $round->id,
             'total_bet' => $total,
-            'balance' => $wallets->balance($user),
+            'balance'   => $wallets->balance($user),
         ], 'Bets placed.');
     }
 
     /**
-     * Result of a round (winning number + this player's payout). Reveals the
-     * server seed once settled so players can verify fairness.
+     * Result of a round. Returns "j" as winning_number when Joker won.
      */
     public function result(Request $request, RoundService $rounds, int $slotId)
     {
@@ -144,47 +143,50 @@ class GameController extends Controller
             return $this->fail('Round not found.', 404);
         }
 
-        // Make sure it's settled (winners paid) before we report the result.
         $rounds->settleIfBettingClosed($round);
         $round->refresh();
 
-        $user = $request->user();
+        $user     = $request->user();
         $userBets = Bet::where('round_id', $round->id)->where('user_id', $user->id)->get();
 
         return $this->ok([
-            'slot_id' => $round->id,
-            'status' => $round->status,
-            'winning_number' => $round->winning_number,
-            'server_seed' => $round->status === 'settled' ? $round->server_seed : null,
-            'server_seed_hash' => $round->server_seed_hash,
-            'your_payout' => number_format((float) $userBets->where('is_winner', true)->sum('payout'), 2, '.', ''),
-            'bets' => $userBets->map(fn ($b) => [
-                'number' => $b->number,
-                'amount' => $b->amount,
+            'slot_id'        => $round->id,
+            'status'         => $round->status,
+            'winning_number' => $rounds->serializeWinner($round->winning_number),  // "j" or 0-9 or null
+            'winning_is_j'   => $round->winning_is_j ?? false,
+            'server_seed'    => $round->status === 'settled' ? $round->server_seed : null,
+            'server_seed_hash'=> $round->server_seed_hash,
+            'your_payout'    => number_format((float) $userBets->where('is_winner', true)->sum('payout'), 2, '.', ''),
+            'bets'           => $userBets->map(fn ($b) => [
+                'number'    => $rounds->serializeWinner($b->number),   // "j" or 0-9
+                'amount'    => $b->amount,
                 'is_winner' => $b->is_winner,
-                'payout' => $b->payout,
+                'payout'    => $b->payout,
             ])->values(),
         ], 'Round result');
     }
 
     /**
      * Last 10 settled winning numbers (for the history strip).
+     * Returns "j" for Joker wins.
      */
-    public function history()
+    public function history(RoundService $rounds)
     {
         $history = Round::where('status', 'settled')
             ->latest('id')
             ->take(10)
-            ->pluck('winning_number');
+            ->get(['winning_number'])
+            ->map(fn ($r) => $rounds->serializeWinner($r->winning_number))
+            ->values();
 
         return $this->ok(['history' => $history], 'History');
     }
 
     /**
      * Normalise the bids payload into [number => amount].
-     * Accepts: JSON string, [{"10":100}], {"10":100}, or [{"number":10,"amount":100}].
+     * Accepts "j" or numeric keys; converts "j" → RoundService::J (10).
      */
-    private function parseBids($bids): array
+    private function parseBids($bids, RoundService $rounds): array
     {
         if (is_string($bids)) {
             $bids = json_decode($bids, true);
@@ -194,30 +196,29 @@ class GameController extends Controller
         }
 
         $items = array_is_list($bids) ? $bids : [$bids];
-        $flat = [];
+        $flat  = [];
 
         foreach ($items as $obj) {
             if (! is_array($obj)) {
                 continue;
             }
 
-            // Support {"number":10,"amount":100} form too.
+            // Support {"number":"j","amount":100} or {"number":5,"amount":50}.
             if (isset($obj['number']) && isset($obj['amount'])) {
-                $n = (int) $obj['number'];
+                $n = $rounds->parseBidKey((string) $obj['number']);
                 $a = (float) $obj['amount'];
-                if ($a > 0) {
+                if ($n !== null && $a > 0) {
                     $flat[$n] = ($flat[$n] ?? 0) + $a;
                 }
                 continue;
             }
 
-            foreach ($obj as $num => $amt) {
-                if (! is_numeric($num)) {
-                    continue;
-                }
+            // Support {"j":100,"0":50} flat map.
+            foreach ($obj as $key => $amt) {
+                $n = $rounds->parseBidKey((string) $key);
                 $a = (float) $amt;
-                if ($a > 0) {
-                    $flat[(int) $num] = ($flat[(int) $num] ?? 0) + $a;
+                if ($n !== null && $a > 0) {
+                    $flat[$n] = ($flat[$n] ?? 0) + $a;
                 }
             }
         }
