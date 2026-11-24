@@ -241,6 +241,34 @@ class RoundService
      */
     protected function shouldJWin(Collection $bets, string $totalBet, int $slotNo): bool
     {
+        // 1. Admin switch: if J is disabled, J can never win.
+        if (! filter_var(Setting::get('j_enabled', '1'), FILTER_VALIDATE_BOOLEAN)) {
+            return false;
+        }
+
+        // 2. Admin Force J / QA Test Mode bypass
+        $forced   = Setting::get('j_force_next_round', '0') === '1';
+        $testMode = filter_var(Setting::get('j_test_mode', '0'), FILTER_VALIDATE_BOOLEAN);
+
+        if ($forced || $testMode) {
+            if ($forced) {
+                Setting::put('j_force_next_round', '0'); // reset single-use trigger
+            }
+
+            // Auto-fund J-pool if insufficient so test payout succeeds cleanly
+            $jBetTotal = $bets->where('number', self::J)->sum('amount');
+            if ($jBetTotal > 0) {
+                $jPayout  = bcmul((string) $jBetTotal, '20', 2);
+                $jBalance = $this->houseWallets->balance('j_pool');
+                if (bccomp($jPayout, $jBalance, 2) > 0) {
+                    $needed = bcsub($jPayout, $jBalance, 2);
+                    $this->houseWallets->credit('j_pool', $needed, 'test_auto_fund', 'force-j-test');
+                }
+            }
+
+            return true;
+        }
+
         // Sum all J bets.
         $jBetTotal = '0';
         foreach ($bets->where('number', self::J) as $bet) {

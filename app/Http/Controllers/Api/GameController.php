@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Bet;
 use App\Models\Round;
+use App\Models\Setting;
 use App\Services\RoundService;
 use App\Services\WalletService;
 use Illuminate\Http\Request;
@@ -87,7 +88,8 @@ class GameController extends Controller
         }
 
         $minBet       = (float) config('game.min_bet', 10);
-        $maxPerNumber = (float) config('game.max_bet_per_number', 100000);
+        $maxSetting   = Setting::get('max_bet_per_number');
+        $maxPerNumber = $maxSetting !== null ? (float) $maxSetting : (float) config('game.max_bet_per_number', 1000000);
         $user         = $request->user();
 
         $total = '0';
@@ -106,7 +108,7 @@ class GameController extends Controller
                 ->where('number', $number)
                 ->sum('amount');
 
-            if (($existing + $amount) > $maxPerNumber) {
+            if ($maxPerNumber > 0 && ($existing + $amount) > $maxPerNumber) {
                 return $this->fail("Maximum bet per number is {$maxPerNumber}.", 422);
             }
 

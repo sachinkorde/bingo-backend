@@ -14,10 +14,15 @@ class GameSettingSeeder extends Seeder
     public function run(): void
     {
         // ── Admin-configurable ────────────────────────────────────────────────
-        Setting::put('j_pool_pct',          '10',  'J-Pool % of net profit (5–20)');
-        Setting::put('j_max_per_hour',       '3',   'Max J wins per hour (1–10)');
-        Setting::put('j_delay_min_rounds',   '2',   'Min rounds before J is declared (anti-prediction)');
-        Setting::put('j_delay_max_rounds',   '5',   'Max rounds before J is declared (anti-prediction)');
+        Setting::put('j_enabled',           '1',       'Enable J from winning (1=enabled, 0=disabled)');
+        Setting::put('j_test_mode',         '0',       'J Test Mode: bypass payout/balance/delay checks (1=on, 0=off)');
+        Setting::put('j_force_next_round',  '0',       'Force J to win in next round (1=force next round, 0=off)');
+        Setting::put('max_bet_per_number',  '1000000', 'Maximum bet per number in ₹ (0 for unlimited)');
+        Setting::put('transfer_max_per_day','500000',  'Maximum transfer per day in ₹');
+        Setting::put('j_pool_pct',          '10',      'J-Pool % of net profit (5–20)');
+        Setting::put('j_max_per_hour',       '3',       'Max J wins per hour (1–10)');
+        Setting::put('j_delay_min_rounds',   '2',       'Min rounds before J is declared (anti-prediction)');
+        Setting::put('j_delay_max_rounds',   '5',       'Max rounds before J is declared (anti-prediction)');
 
         // ── Internal state (not for manual editing) ───────────────────────────
         Setting::put('j_pending_until_slot', '0',   '[internal] Slot no. at which pending J is declared');

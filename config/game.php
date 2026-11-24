@@ -24,8 +24,8 @@ return [
     // result window = session_seconds - betting_seconds (e.g. 10s for spin + reveal)
 
     'min_bet' => (float) env('GAME_MIN_BET', 10),
-    'max_bet_per_number' => (float) env('GAME_MAX_BET_PER_NUMBER', 100000),
-    'max_payout_per_round' => (float) env('GAME_MAX_PAYOUT_PER_ROUND', 500000),
+    'max_bet_per_number' => (float) env('GAME_MAX_BET_PER_NUMBER', 1000000), // Default: 10 Lakh (₹10,00,000)
+    'max_payout_per_round' => (float) env('GAME_MAX_PAYOUT_PER_ROUND', 5000000),
 
     'starting_balance' => (float) env('GAME_STARTING_BALANCE', 0),
 
@@ -38,7 +38,7 @@ return [
     | colluding accounts obvious rather than silent.
     */
     'transfer_min' => (float) env('TRANSFER_MIN', 10),
-    'transfer_max_per_day' => (float) env('TRANSFER_MAX_PER_DAY', 50000),
+    'transfer_max_per_day' => (float) env('TRANSFER_MAX_PER_DAY', 500000),
 
     // Paid to the inviter when their invitee makes a first successful deposit.
     'referral_bonus' => (float) env('REFERRAL_BONUS', 50),

@@ -27,6 +27,11 @@ class GameTest extends TestCase
         HouseWallet::firstOrCreate(['type' => 'admin_profit'], ['balance' => '0.00']);
 
         // Seed J settings with known defaults.
+        Setting::put('j_enabled',           '1');
+        Setting::put('j_test_mode',         '0');
+        Setting::put('j_force_next_round',  '0');
+        Setting::put('max_bet_per_number',  '1000000');
+        Setting::put('transfer_max_per_day','500000');
         Setting::put('j_pool_pct',          '10');
         Setting::put('j_max_per_hour',       '3');
         Setting::put('j_delay_min_rounds',   '2');
@@ -487,5 +492,101 @@ class GameTest extends TestCase
         $jBet = collect($result->json('data.bets'))->firstWhere('number', 'j');
         $this->assertNotNull($jBet);
         $this->assertTrue($jBet['is_winner']);
+    }
+
+    public function test_bet_greater_than_1_lakh_accepted(): void
+    {
+        // Player funds ₹5,00,000 and bets ₹2,00,000 on number 1 (previously capped at 1 Lakh).
+        $token  = $this->registerAndFund('9876500020', 500000);
+        $slotNo = $this->withToken($token)->getJson('/api/round/current')->json('data.slot_no');
+
+        $res = $this->withToken($token)->postJson('/api/place-bid', [
+            'slot_no' => $slotNo,
+            'bids'    => json_encode([['1' => 200000]]),
+        ]);
+
+        $res->assertOk()->assertJson(['success' => true]);
+        $this->assertEquals('300000.00', $res->json('data.balance')); // 500,000 - 200,000
+    }
+
+    public function test_j_disabled_by_admin_never_wins(): void
+    {
+        $this->seedJPool(100000);
+        Setting::put('j_enabled', '0'); // Admin disables J
+        Setting::put('j_delay_min_rounds', '0');
+        Setting::put('j_delay_max_rounds', '0');
+
+        $token   = $this->registerAndFund('9876500021', 50000);
+        $session = $this->withToken($token)->getJson('/api/round/current')->json('data');
+        $slotId  = $session['slot_id'];
+        $slotNo  = $session['slot_no'];
+
+        // Bet meets all other conditions (J bet ₹100, other bets ₹2000, total ₹2100 > ₹2000)
+        $this->withToken($token)->postJson('/api/place-bid', [
+            'slot_no' => $slotNo,
+            'bids'    => json_encode([['j' => 100, '1' => 2000]]),
+        ])->assertOk();
+
+        $round = Round::find($slotId);
+        app(RoundService::class)->settle($round);
+        $round->refresh();
+
+        // Because j_enabled = 0, J must NOT win!
+        $this->assertFalse($round->winning_is_j);
+        $this->assertNotEquals('j', $round->winning_number);
+    }
+
+    public function test_force_j_next_round_wins_immediately_and_resets(): void
+    {
+        // Force J on next round (pool is empty, no other bets, delay is default)
+        Setting::put('j_force_next_round', '1');
+
+        $token   = $this->registerAndFund('9876500022', 1000);
+        $session = $this->withToken($token)->getJson('/api/round/current')->json('data');
+        $slotId  = $session['slot_id'];
+        $slotNo  = $session['slot_no'];
+
+        // Only ₹50 bet on J (total bet is ₹50, payout is ₹1000, pool is ₹0).
+        // In normal mode this would fail conditions 1 & 2. But forced = 1 bypasses everything!
+        $this->withToken($token)->postJson('/api/place-bid', [
+            'slot_no' => $slotNo,
+            'bids'    => json_encode([['j' => 50]]),
+        ])->assertOk();
+
+        $round = Round::find($slotId);
+        app(RoundService::class)->settle($round);
+        $round->refresh();
+
+        $this->assertTrue($round->winning_is_j);
+        $this->assertEquals(RoundService::J, $round->winning_number);
+
+        // j_force_next_round must be consumed and reset to '0'
+        $this->assertEquals('0', Setting::get('j_force_next_round'));
+
+        // Payout must be credited: 50 * 20 = 1000. Balance = 1000 - 50 + 1000 = 1950.
+        $balance = $this->withToken($token)->getJson('/api/wallet/balance')->json('data.balance');
+        $this->assertEquals('1950.00', $balance);
+    }
+
+    public function test_j_test_mode_bypasses_conditions(): void
+    {
+        // Turn on continuous QA Test Mode
+        Setting::put('j_test_mode', '1');
+
+        $token   = $this->registerAndFund('9876500023', 1000);
+        $session = $this->withToken($token)->getJson('/api/round/current')->json('data');
+        $slotId  = $session['slot_id'];
+        $slotNo  = $session['slot_no'];
+
+        $this->withToken($token)->postJson('/api/place-bid', [
+            'slot_no' => $slotNo,
+            'bids'    => json_encode([['j' => 50]]),
+        ])->assertOk();
+
+        $round = Round::find($slotId);
+        app(RoundService::class)->settle($round);
+        $round->refresh();
+
+        $this->assertTrue($round->winning_is_j);
     }
 }

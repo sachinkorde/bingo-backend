@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Deposit;
+use App\Models\Setting;
 use App\Models\Transfer;
 use App\Models\User;
 use App\Models\Withdrawal;
@@ -178,7 +179,8 @@ class WalletController extends Controller
         $amount = number_format((float) $data['amount'], 2, '.', '');
 
         // Daily cap: bounds the damage from a compromised account.
-        $cap = (float) config('game.transfer_max_per_day', 0);
+        $capSetting = Setting::get('transfer_max_per_day');
+        $cap = $capSetting !== null ? (float) $capSetting : (float) config('game.transfer_max_per_day', 500000);
         if ($cap > 0) {
             $sentToday = (float) Transfer::where('sender_id', $sender->id)
                 ->where('status', 'completed')

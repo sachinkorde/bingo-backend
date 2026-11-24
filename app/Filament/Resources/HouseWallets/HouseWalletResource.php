@@ -73,7 +73,7 @@ class HouseWalletResource extends Resource
                     ->label('Top Up')
                     ->icon(Heroicon::OutlinedPlusCircle)
                     ->color('info')
-                    ->visible(fn (HouseWallet $record) => $record->type === 'j_pool')
+                    ->visible(fn (HouseWallet $record) => in_array($record->type, ['j_pool', 'admin_profit']))
                     ->form([
                         TextInput::make('amount')
                             ->label('Top-up amount (₹)')
@@ -86,15 +86,16 @@ class HouseWalletResource extends Resource
                     ])
                     ->action(function (HouseWallet $record, array $data) {
                         app(HouseWalletService::class)->credit(
-                            'j_pool',
+                            $record->type,
                             (string) $data['amount'],
                             'manual',
                             'admin-topup',
                             ['note' => $data['note'] ?? null]
                         );
 
+                        $walletName = $record->type === 'j_pool' ? 'J-Pool' : 'Admin Profit';
                         Notification::make()
-                            ->title('J-Pool topped up by ₹' . number_format((float) $data['amount'], 2))
+                            ->title("{$walletName} topped up by ₹" . number_format((float) $data['amount'], 2))
                             ->success()
                             ->send();
                     }),
