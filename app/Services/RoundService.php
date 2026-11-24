@@ -145,10 +145,10 @@ class RoundService
     }
 
     /**
-     * The winning value once settled: returns "j" (string) or an integer (0-9),
+     * The winning value once settled: returns integer 10 (J) or an integer (0-9),
      * or null while still in the result phase before settlement.
      */
-    public function winningNumberFor(Round $session): string|int|null
+    public function winningNumberFor(Round $session): ?int
     {
         if ($session->status === 'settled') {
             return $this->serializeWinner($session->winning_number);
@@ -441,15 +441,15 @@ class RoundService
 
     /**
      * Convert internal integer winner (10 = J) to the API-facing value.
-     * Returns "j" for J, or the integer for 0-9, or null.
+     * Returns 10 for J, or the integer for 0-9, or null.
      */
-    public function serializeWinner(int|null $number): string|int|null
+    public function serializeWinner(int|null $number): ?int
     {
         if ($number === null) {
             return null;
         }
 
-        return $number === self::J ? 'j' : $number;
+        return (int) $number;
     }
 
     /**

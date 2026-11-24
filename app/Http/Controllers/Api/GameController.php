@@ -30,7 +30,7 @@ class GameController extends Controller
             'phase'             => $t['phase'],        // 'betting' or 'result'
             'seconds_left'      => $t['phase_seconds_left'],
             'session_seconds_left' => $t['session_seconds_left'],
-            'winning_number'    => $rounds->winningNumberFor($session), // "j", 0-9, or null
+            'winning_number'    => $rounds->winningNumberFor($session), // 10, 0-9, or null
             'server_seed_hash'  => $session->server_seed_hash,
             'numbers'           => $rounds->numbers(),
             'payout_multiplier' => (int) config('game.payout_multiplier', 9),
@@ -96,8 +96,7 @@ class GameController extends Controller
         foreach ($map as $number => $amount) {
             // 0-9 and J=10 are valid; anything else is rejected.
             if ($number < 0 || $number > RoundService::J) {
-                $label = $number === RoundService::J ? 'J' : $number;
-                return $this->fail("Invalid number: {$label}", 422);
+                return $this->fail("Invalid number: {$number}", 422);
             }
             if ($amount < $minBet) {
                 return $this->fail("Minimum bet is {$minBet}.", 422);
@@ -136,7 +135,7 @@ class GameController extends Controller
     }
 
     /**
-     * Result of a round. Returns "j" as winning_number when Joker won.
+     * Result of a round. Returns 10 as winning_number when Joker won.
      */
     public function result(Request $request, RoundService $rounds, int $slotId)
     {
@@ -154,13 +153,13 @@ class GameController extends Controller
         return $this->ok([
             'slot_id'        => $round->id,
             'status'         => $round->status,
-            'winning_number' => $rounds->serializeWinner($round->winning_number),  // "j" or 0-9 or null
+            'winning_number' => $rounds->serializeWinner($round->winning_number),  // 10 or 0-9 or null
             'winning_is_j'   => $round->winning_is_j ?? false,
             'server_seed'    => $round->status === 'settled' ? $round->server_seed : null,
             'server_seed_hash'=> $round->server_seed_hash,
             'your_payout'    => number_format((float) $userBets->where('is_winner', true)->sum('payout'), 2, '.', ''),
             'bets'           => $userBets->map(fn ($b) => [
-                'number'    => $rounds->serializeWinner($b->number),   // "j" or 0-9
+                'number'    => (int) $b->number,   // 10 or 0-9
                 'amount'    => $b->amount,
                 'is_winner' => $b->is_winner,
                 'payout'    => $b->payout,
@@ -170,7 +169,7 @@ class GameController extends Controller
 
     /**
      * Last 10 settled winning numbers (for the history strip).
-     * Returns "j" for Joker wins.
+     * Returns 10 for Joker wins.
      */
     public function history(RoundService $rounds)
     {

@@ -246,7 +246,7 @@ class GameTest extends TestCase
         $round->refresh();
 
         $this->assertFalse($round->winning_is_j);
-        $this->assertNotEquals('j', $round->winning_number); // number wins
+        $this->assertNotEquals(RoundService::J, $round->winning_number); // number wins
     }
 
     public function test_j_does_not_win_when_payout_exceeds_total_bet(): void
@@ -355,7 +355,7 @@ class GameTest extends TestCase
         $round2->refresh();
 
         $this->assertTrue($round2->winning_is_j, 'J should win after delay elapses');
-        $this->assertEquals('j', $rounds->serializeWinner($round2->winning_number));
+        $this->assertEquals(RoundService::J, $rounds->serializeWinner($round2->winning_number));
     }
 
     public function test_j_pool_deducted_on_j_win(): void
@@ -481,15 +481,15 @@ class GameTest extends TestCase
         $result = $this->withToken($token)->getJson("/api/round/{$slotId}/result");
         $result->assertOk();
 
-        // API must return string "j", not integer 10.
-        $this->assertEquals('j', $result->json('data.winning_number'));
+        // API must return integer 10, not string "j".
+        $this->assertSame(RoundService::J, $result->json('data.winning_number'));
         $this->assertTrue($result->json('data.winning_is_j'));
 
         // Player bet on J → payout = 100 × 20 = ₹2000.
         $this->assertEquals('2000.00', $result->json('data.your_payout'));
 
-        // Bet response shows "j" key in bets array.
-        $jBet = collect($result->json('data.bets'))->firstWhere('number', 'j');
+        // Bet response shows integer 10 in bets array.
+        $jBet = collect($result->json('data.bets'))->firstWhere('number', RoundService::J);
         $this->assertNotNull($jBet);
         $this->assertTrue($jBet['is_winner']);
     }
@@ -533,7 +533,7 @@ class GameTest extends TestCase
 
         // Because j_enabled = 0, J must NOT win!
         $this->assertFalse($round->winning_is_j);
-        $this->assertNotEquals('j', $round->winning_number);
+        $this->assertNotEquals(RoundService::J, $round->winning_number);
     }
 
     public function test_force_j_next_round_wins_immediately_and_resets(): void
@@ -588,5 +588,40 @@ class GameTest extends TestCase
         $round->refresh();
 
         $this->assertTrue($round->winning_is_j);
+    }
+
+    public function test_betting_with_key_10_and_history_shows_integer_10(): void
+    {
+        Setting::put('j_force_next_round', '1');
+
+        $token   = $this->registerAndFund('9876500024', 2000);
+        $session = $this->withToken($token)->getJson('/api/round/current')->json('data');
+        $slotId  = $session['slot_id'];
+        $slotNo  = $session['slot_no'];
+
+        // Place bid using integer key "10" (as frontend sends 10)
+        $this->withToken($token)->postJson('/api/place-bid', [
+            'slot_no' => $slotNo,
+            'bids'    => json_encode([['10' => 100]]),
+        ])->assertOk();
+
+        $round = Round::find($slotId);
+        app(RoundService::class)->settle($round);
+        $round->refresh();
+
+        $this->assertTrue($round->winning_is_j);
+        $this->assertSame(RoundService::J, $round->winning_number);
+
+        // Result endpoint checks
+        $result = $this->withToken($token)->getJson("/api/round/{$slotId}/result");
+        $result->assertOk();
+        $this->assertSame(10, $result->json('data.winning_number'));
+        $this->assertSame(10, $result->json('data.bets.0.number'));
+
+        // History endpoint checks: winning_number must be integer 10
+        $historyRes = $this->withToken($token)->getJson('/api/round/history');
+        $historyRes->assertOk();
+        $history = $historyRes->json('data.history');
+        $this->assertSame(10, $history[0]);
     }
 }
